@@ -1,4 +1,4 @@
 [gerrit]
-host=review.openstack.org
+host=review.opendev.org
 port=29418
-project=dims/etcd3-gateway.git
+project=openstack/etcd3gw.git
