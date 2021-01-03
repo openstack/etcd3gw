@@ -11,12 +11,11 @@
 #    under the License.
 
 import json
+import queue
 import threading
 import uuid
 
 import requests
-import six
-from six.moves import queue
 
 from etcd3gw import exceptions
 from etcd3gw.lease import Lease
@@ -90,9 +89,9 @@ class Etcd3Client(object):
             if resp.status_code != requests.codes['ok']:
                 raise exceptions.Etcd3Exception(resp.text, resp.reason)
         except requests.exceptions.Timeout as ex:
-            raise exceptions.ConnectionTimeoutError(six.text_type(ex))
+            raise exceptions.ConnectionTimeoutError(str(ex))
         except requests.exceptions.ConnectionError as ex:
-            raise exceptions.ConnectionFailedError(six.text_type(ex))
+            raise exceptions.ConnectionFailedError(str(ex))
         return resp.json()
 
     def status(self):

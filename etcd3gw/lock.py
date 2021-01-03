@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 import uuid
 
 from etcd3gw.utils import _encode
@@ -103,7 +102,7 @@ class Lock(object):
     def is_acquired(self):
         """Check if the lock is acquired"""
         values = self.client.get(self.key)
-        return six.b(self._uuid) in values
+        return self._uuid.encode("latin-1") in values
 
     def __enter__(self):
         """Use the lock as a contextmanager"""

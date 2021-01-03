@@ -14,7 +14,6 @@ import base64
 import sys
 
 import futurist
-import six
 
 bytes_types = (bytes, bytearray)
 
@@ -26,7 +25,7 @@ def _encode(data):
     :return: base-64 encoded string
     """
     if not isinstance(data, bytes_types):
-        data = six.b(str(data))
+        data = str(data).encode("latin-1")
     return base64.b64encode(data).decode("utf-8")
 
 
@@ -37,7 +36,7 @@ def _decode(data):
     :return: decoded data
     """
     if not isinstance(data, bytes_types):
-        data = six.b(str(data))
+        data = str(data).encode("latin-1")
     return base64.b64decode(data.decode("utf-8"))
 
 
@@ -48,10 +47,10 @@ def _increment_last_byte(data):
     :return:
     """
     if not isinstance(data, bytes_types):
-        if isinstance(data, six.string_types):
+        if isinstance(data, str):
             data = data.encode('utf-8')
         else:
-            data = six.b(str(data))
+            data = str(data).encode("latin-1")
     s = bytearray(data)
     s[-1] = s[-1] + 1
     return bytes(s)

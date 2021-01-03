@@ -20,7 +20,6 @@ Tests for `etcd3gw` module.
 import base64
 import json
 import requests
-import six
 import threading
 import time
 import uuid
@@ -75,11 +74,11 @@ class TestEtcd3Gateway(base.TestCase):
     def test_client_with_keys_and_values(self):
         self.assertTrue(self.client.put('foo0', 'bar0'))
         self.assertTrue(self.client.put('foo1', 2001))
-        self.assertTrue(self.client.put('foo2', 'bar2'.encode("utf-8")))
+        self.assertTrue(self.client.put('foo2', b'bar2'))
 
-        self.assertEqual([six.b('bar0')], self.client.get('foo0'))
-        self.assertEqual([six.b('2001')], self.client.get('foo1'))
-        self.assertEqual([six.b('bar2')], self.client.get('foo2'))
+        self.assertEqual([b'bar0'], self.client.get('foo0'))
+        self.assertEqual([b'2001'], self.client.get('foo1'))
+        self.assertEqual([b'bar2'], self.client.get('foo2'))
 
         self.assertEqual(True, self.client.delete('foo0'))
         self.assertEqual([], self.client.get('foo0'))
@@ -96,8 +95,8 @@ class TestEtcd3Gateway(base.TestCase):
         values = list(self.client.get_prefix('/doot1/range'))
         assert len(values) == 20
         for value, metadata in values:
-            self.assertEqual(six.b('i am a range'), value)
-            self.assertTrue(metadata['key'].startswith(six.b('/doot1/range')))
+            self.assertEqual(b'i am a range', value)
+            self.assertTrue(metadata['key'].startswith(b'/doot1/range'))
 
         self.assertEqual(True, self.client.delete_prefix('/doot1/range'))
         values = list(self.client.get_prefix('/doot1/range'))
@@ -115,19 +114,21 @@ class TestEtcd3Gateway(base.TestCase):
         for k, v in zip(initial_keys, initial_values):
             self.client.put('/doot2/{}'.format(k), v)
 
-        keys = six.b('')
+        keys = b''
         for value, meta in self.client.get_prefix(
                 '/doot2', sort_order='ascend'):
             keys += remove_prefix(meta['key'], '/doot2/')
 
-        assert keys == six.b(initial_keys)
+        assert keys == initial_keys.encode("latin-1")
 
-        reverse_keys = six.b('')
+        reverse_keys = b''
         for value, meta in self.client.get_prefix(
                 '/doot2', sort_order='descend'):
             reverse_keys += remove_prefix(meta['key'], '/doot2/')
 
-        assert reverse_keys == six.b(''.join(reversed(initial_keys)))
+        assert reverse_keys == ''.join(
+            reversed(initial_keys)
+        ).encode("latin-1")
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
@@ -142,19 +143,21 @@ class TestEtcd3Gateway(base.TestCase):
         for k, v in zip(initial_keys, initial_values):
             self.client.put('/doot2/{}'.format(k), v)
 
-        keys = six.b('')
+        keys = b''
         for value, meta in self.client.get_prefix(
                 '/doot2', sort_order='ascend', sort_target='key'):
             keys += remove_prefix(meta['key'], '/doot2/')
 
-        assert keys == six.b(initial_keys_ordered)
+        assert keys == initial_keys_ordered.encode("latin-1")
 
-        reverse_keys = six.b('')
+        reverse_keys = b''
         for value, meta in self.client.get_prefix(
                 '/doot2', sort_order='descend', sort_target='key'):
             reverse_keys += remove_prefix(meta['key'], '/doot2/')
 
-        assert reverse_keys == six.b(''.join(reversed(initial_keys_ordered)))
+        assert reverse_keys == ''.join(
+            reversed(initial_keys_ordered)
+        ).encode("latin-1")
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
@@ -168,19 +171,21 @@ class TestEtcd3Gateway(base.TestCase):
         for k, v in zip(initial_keys, initial_values):
             self.client.put('/expsortmod/{}'.format(k), v)
 
-        keys = six.b('')
+        keys = b''
         for value, meta in self.client.get_prefix(
                 '/expsortmod', sort_order='ascend', sort_target='mod'):
             keys += remove_prefix(meta['key'], '/expsortmod/')
 
-        assert keys == six.b(initial_keys)
+        assert keys == initial_keys.encode("latin-1")
 
-        reverse_keys = six.b('')
+        reverse_keys = b''
         for value, meta in self.client.get_prefix(
                 '/expsortmod', sort_order='descend', sort_target='mod'):
             reverse_keys += remove_prefix(meta['key'], '/expsortmod/')
 
-        assert reverse_keys == six.b(''.join(reversed(initial_keys)))
+        assert reverse_keys == ''.join(
+            reversed(initial_keys)
+        ).encode("latin-1")
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
@@ -189,7 +194,7 @@ class TestEtcd3Gateway(base.TestCase):
         self.client.put(key, 'toot')
         status = self.client.replace(key, 'toot', 'doot')
         v = self.client.get(key)
-        self.assertEqual([six.b('doot')], v)
+        self.assertEqual([b'doot'], v)
         self.assertTrue(status)
 
     @unittest.skipUnless(
@@ -199,7 +204,7 @@ class TestEtcd3Gateway(base.TestCase):
         self.client.put(key, 'boot')
         status = self.client.replace(key, 'toot', 'doot')
         v = self.client.get(key)
-        self.assertEqual([six.b('boot')], v)
+        self.assertEqual([b'boot'], v)
         self.assertFalse(status)
 
     @unittest.skipUnless(
@@ -230,11 +235,11 @@ class TestEtcd3Gateway(base.TestCase):
 
         keys = lease.keys()
         self.assertEqual(2, len(keys))
-        self.assertIn(six.b('foo12'), keys)
-        self.assertIn(six.b('foo13'), keys)
+        self.assertIn(b'foo12', keys)
+        self.assertIn(b'foo13', keys)
 
-        self.assertEqual([six.b('bar12')], self.client.get('foo12'))
-        self.assertEqual([six.b('bar13')], self.client.get('foo13'))
+        self.assertEqual([b'bar12'], self.client.get('foo12'))
+        self.assertEqual([b'bar13'], self.client.get('foo13'))
 
         self.assertTrue(lease.revoke())
 
@@ -246,7 +251,7 @@ class TestEtcd3Gateway(base.TestCase):
         def update_etcd(v):
             self.client.put(key, v)
             out = self.client.get(key)
-            self.assertEqual([six.b(v)], out)
+            self.assertEqual([v.encode("latin-1")], out)
 
         def update_key():
             # sleep to make watch can get the event
@@ -266,11 +271,14 @@ class TestEtcd3Gateway(base.TestCase):
         change_count = 0
         events_iterator, cancel = self.client.watch(key)
         for event in events_iterator:
-            self.assertEqual(event['kv']['key'], six.b(key))
-            self.assertEqual(event['kv']['value'], six.b(str(change_count)))
+            self.assertEqual(event['kv']['key'], key.encode("latin-1"))
+            self.assertEqual(
+                event['kv']['value'],
+                str(change_count).encode("latin-1"),
+            )
 
             # if cancel worked, we should not receive event 3
-            assert event['kv']['value'] != six.b('3')
+            assert event['kv']['value'] != b'3'
 
             change_count += 1
             if change_count > 2:
@@ -287,7 +295,7 @@ class TestEtcd3Gateway(base.TestCase):
         def update_etcd(v):
             self.client.put(key + v, v)
             out = self.client.get(key + v)
-            self.assertEqual([six.b(v)], out)
+            self.assertEqual([v.encode("latin-1")], out)
 
         def update_key():
             # sleep to make watch can get the event
@@ -307,15 +315,20 @@ class TestEtcd3Gateway(base.TestCase):
         change_count = 0
         events_iterator, cancel = self.client.watch_prefix(key)
         for event in events_iterator:
-            if not event['kv']['key'].startswith(six.b(key)):
+            if not event['kv']['key'].startswith(key.encode("latin-1")):
                 continue
 
-            self.assertEqual(event['kv']['key'],
-                             six.b('%s%s' % (key, change_count)))
-            self.assertEqual(event['kv']['value'], six.b(str(change_count)))
+            self.assertEqual(
+                event['kv']['key'],
+                ('%s%s' % (key, change_count)).encode("latin-1"),
+            )
+            self.assertEqual(
+                event['kv']['value'],
+                str(change_count).encode("latin-1"),
+            )
 
             # if cancel worked, we should not receive event 3
-            assert event['kv']['value'] != six.b('3')
+            assert event['kv']['value'] != b'3'
 
             change_count += 1
             if change_count > 2:
@@ -377,7 +390,7 @@ class TestEtcd3Gateway(base.TestCase):
 
         status = self.client.create(key, 'bar')
         # Verify that key is 'bar'
-        self.assertEqual([six.b('bar')], self.client.get(key))
+        self.assertEqual([b'bar'], self.client.get(key))
         self.assertTrue(status)
 
     @unittest.skipUnless(
@@ -386,11 +399,11 @@ class TestEtcd3Gateway(base.TestCase):
         key = '/foo/' + str(uuid.uuid4())
         # Assign value to the key
         self.client.put(key, 'bar')
-        self.assertEqual([six.b('bar')], self.client.get(key))
+        self.assertEqual([b'bar'], self.client.get(key))
 
         status = self.client.create(key, 'goo')
         # Verify that key is still 'bar'
-        self.assertEqual([six.b('bar')], self.client.get(key))
+        self.assertEqual([b'bar'], self.client.get(key))
         self.assertFalse(status)
 
     @unittest.skipUnless(
@@ -403,11 +416,11 @@ class TestEtcd3Gateway(base.TestCase):
 
         status = self.client.create(key, 'bar', lease=lease)
         # Verify that key is 'bar'
-        self.assertEqual([six.b('bar')], self.client.get(key))
+        self.assertEqual([b'bar'], self.client.get(key))
         self.assertTrue(status)
         keys = lease.keys()
         self.assertEqual(1, len(keys))
-        self.assertIn(six.b(key), keys)
+        self.assertIn(key.encode('latin-1'), keys)
 
     def my_iter_content(self, *args, **kwargs):
         payload = json.dumps({
