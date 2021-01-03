@@ -37,4 +37,4 @@ Basic usage example::
 
     for event in watcher: # blocks until event comes, cancel via watch_cancel()
         print(event)
-        # modify event: {u'kv': {u'mod_revision': u'8', u'version': u'3', u'value': 'NEW_VAL', u'create_revision': u'2', u'key': 'KEY', u'lease': u'7587847878767953426'}}
+        # modify event: {'kv': {'mod_revision': '8', 'version': '3', 'value': 'NEW_VAL', 'create_revision': '2', 'key': 'KEY', 'lease': '7587847878767953426'}}
