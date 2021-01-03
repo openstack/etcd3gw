@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+from unittest import mock
 
 from etcd3gw.client import Etcd3Client
 from etcd3gw.exceptions import Etcd3Exception
