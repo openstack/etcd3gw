@@ -17,12 +17,16 @@ test_etcd3-gateway
 Tests for `etcd3gw` module.
 """
 
+import base64
+import json
+import requests
 import six
 import threading
 import time
 import uuid
 
 from testtools.testcase import unittest
+from unittest import mock
 import urllib3
 
 from etcd3gw.client import Etcd3Client
@@ -404,3 +408,30 @@ class TestEtcd3Gateway(base.TestCase):
         keys = lease.keys()
         self.assertEqual(1, len(keys))
         self.assertIn(six.b(key), keys)
+
+    def my_iter_content(self, *args, **kwargs):
+        payload = json.dumps({
+            'result': {
+                'events': [{
+                    'kv': {'key': base64.b64encode(b'value').decode('utf-8')},
+                }]
+            }
+        })
+
+        if not kwargs.get('decode_unicode', False):
+            payload = payload.encode()
+        return [payload]
+
+    @mock.patch.object(requests.Response, 'iter_content', new=my_iter_content)
+    @mock.patch.object(requests.sessions.Session, 'post')
+    def test_watch_unicode(self, mock_post):
+        mocked_response = requests.Response()
+        mocked_response.connection = mock.Mock()
+        mock_post.return_value = mocked_response
+
+        try:
+            res = self.client.watch_once('/some/key', timeout=1)
+        except exceptions.WatchTimedOut:
+            self.fail("watch timed out when server responded with unicode")
+
+        self.assertEqual(res, {'kv': {'key': b'value'}})

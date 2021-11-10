@@ -19,7 +19,7 @@ from etcd3gw.utils import _get_threadpool_executor
 
 
 def _watch(resp, callback):
-    for line in resp.iter_content(chunk_size=None, decode_unicode=True):
+    for line in resp.iter_content(chunk_size=None, decode_unicode=False):
         decoded_line = line.decode('utf-8')
         payload = json.loads(decoded_line)
         if 'created' in payload['result']:
