@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The client adds support for specifying the etcd grpc-gateway's API path.
+    For backward compatibility, the path defaults to '/v3alpha/', but may
+    be overriden (e.g. '/v3') for newer versions of etcd that no longer support
+    the v3alpha API.

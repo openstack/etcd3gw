@@ -37,11 +37,13 @@ _EXCEPTIONS_BY_CODE = {
     requests.codes['precondition_failed']: exceptions.PreconditionFailedError,
 }
 
+DEFAULT_API_PATH = '/v3alpha/'
+
 
 class Etcd3Client(object):
     def __init__(self, host='localhost', port=2379, protocol="http",
                  ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
-                 api_path='/v3alpha/'):
+                 api_path=DEFAULT_API_PATH):
         """Construct an client to talk to etcd3's grpc-gateway's /v3 HTTP API
 
         :param host:
@@ -409,7 +411,7 @@ class Etcd3Client(object):
 
 def client(host='localhost', port=2379,
            ca_cert=None, cert_key=None, cert_cert=None,
-           timeout=None, protocol="http"):
+           timeout=None, protocol="http", api_path=DEFAULT_API_PATH):
     """Return an instance of an Etcd3Client."""
     return Etcd3Client(host=host,
                        port=port,
@@ -417,4 +419,5 @@ def client(host='localhost', port=2379,
                        cert_key=cert_key,
                        cert_cert=cert_cert,
                        timeout=timeout,
+                       api_path=api_path,
                        protocol=protocol)

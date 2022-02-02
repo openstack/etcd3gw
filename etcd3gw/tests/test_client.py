@@ -74,3 +74,8 @@ class TestEtcd3Gateway(base.TestCase):
                 self.assertEqual(e.detail_text, '''{
 "error": "etcdserver: unable to reach quorum"
 }''')
+
+    def test_client_api_path(self):
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
+        self.assertEqual("http://127.0.0.1:2379/v3/lease/grant",
+                         client.get_url("/lease/grant"))
