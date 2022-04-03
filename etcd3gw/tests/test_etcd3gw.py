@@ -31,6 +31,7 @@ import urllib3
 from etcd3gw.client import Etcd3Client
 from etcd3gw import exceptions
 from etcd3gw.tests import base
+from etcd3gw import utils
 
 try:
     # Python 3.8 : time.clock was deprecated and removed.
@@ -448,3 +449,44 @@ class TestEtcd3Gateway(base.TestCase):
             self.fail("watch timed out when server responded with unicode")
 
         self.assertEqual(res, {'kv': {'key': b'value'}})
+
+    def _post_key(self, key_name, provide_value=True):
+        payload = {"key": utils._encode(key_name)}
+        if provide_value:
+            payload["value"] = utils._encode(key_name)
+        self.client.post(self.client.get_url("/kv/put"), json=payload)
+
+    @unittest.skipUnless(
+        _is_etcd3_running(), "etcd3 is not available")
+    def test_client_keys_with_metadata_and_value(self):
+        test_key_value = b"some_key"
+        self._post_key(test_key_value)
+        result = self.client.get(test_key_value, metadata=True)
+        self.assertTrue(
+            len(result) > 0,
+            str(test_key_value) + " key is not found in etcd"
+        )
+        value, metadata = result[0]
+        self.assertEqual(
+            value,
+            test_key_value,
+            "unable to get value for " + str(test_key_value)
+        )
+
+    @unittest.skipUnless(
+        _is_etcd3_running(), "etcd3 is not available")
+    def test_client_keys_with_metadata_and_no_value(self):
+        value_is_not_set_default = b""
+        test_key = b"some_key"
+        self._post_key(test_key, provide_value=False)
+        result = self.client.get(test_key, metadata=True)
+        self.assertTrue(
+            len(result) > 0,
+            str(test_key) + " key is not found in etcd"
+        )
+        value, metadata = result[0]
+        self.assertEqual(
+            value,
+            value_is_not_set_default,
+            "unable to get value for " + str(test_key)
+        )
