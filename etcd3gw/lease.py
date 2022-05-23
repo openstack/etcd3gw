@@ -57,11 +57,14 @@ class Lease(object):
         streaming keep alive responses from the server to the client.
         This method makes a synchronous HTTP request by default.
 
-        :return:
+        :return: returns new TTL for lease. If lease was already expired then
+            TTL field is absent in response and the function returns -1
+            according to etcd documentation.
+            https://etcd.io/docs/v3.5/dev-guide/apispec/swagger/rpc.swagger.json
         """
         result = self.client.post(self.client.get_url("/lease/keepalive"),
                                   json={"ID": self.id})
-        return int(result['result']['TTL'])
+        return int(result['result'].get('TTL', -1))
 
     def keys(self):
         """Get the keys associated with this lease.
