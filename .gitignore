@@ -54,5 +54,8 @@ ChangeLog
 .*.swp
 .*sw?
 
+# etcd files downloaded by functional tests
+etcd-v*
+
 # Files created by releasenotes build
 releasenotes/build
