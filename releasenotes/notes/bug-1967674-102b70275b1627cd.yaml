@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Add compatibility with another etcd clients, that may have not provide value while posting a key

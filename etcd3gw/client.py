@@ -231,12 +231,11 @@ class Etcd3Client(object):
         if metadata:
             def value_with_metadata(item):
                 item['key'] = _decode(item['key'])
-                value = _decode(item.pop('value'))
+                value = _decode(item.pop('value', ''))
                 return value, item
-
             return [value_with_metadata(item) for item in result['kvs']]
-        else:
-            return [_decode(item['value']) for item in result['kvs']]
+
+        return [_decode(item.get('value', '')) for item in result['kvs']]
 
     def get_all(self, sort_order=None, sort_target='key'):
         """Get all keys currently stored in etcd.
