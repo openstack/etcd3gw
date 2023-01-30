@@ -11,6 +11,7 @@
 #    under the License.
 
 import json
+import os
 import queue
 import threading
 import uuid
@@ -37,7 +38,7 @@ _EXCEPTIONS_BY_CODE = {
     requests.codes['precondition_failed']: exceptions.PreconditionFailedError,
 }
 
-DEFAULT_API_PATH = '/v3alpha/'
+DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH', '/v3alpha/')
 
 
 class Etcd3Client(object):
