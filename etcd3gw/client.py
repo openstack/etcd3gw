@@ -38,7 +38,7 @@ _EXCEPTIONS_BY_CODE = {
     requests.codes['precondition_failed']: exceptions.PreconditionFailedError,
 }
 
-DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH', '/v3alpha/')
+DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH')
 
 
 class Etcd3Client(object):
@@ -62,7 +62,47 @@ class Etcd3Client(object):
             self.session.verify = ca_cert
         if cert_cert is not None and cert_key is not None:
             self.session.cert = (cert_cert, cert_key)
-        self.api_path = api_path
+        self._api_path = api_path
+
+    @property
+    def api_path(self):
+        if self._api_path is not None:
+            return self._api_path
+        self._discover_api_path()
+        return self._api_path
+
+    @property
+    def base_url(self):
+        host = ('[' + self.host + ']' if (self.host.find(':') != -1)
+                else self.host)
+        return self.protocol + '://' + host + ':' + str(self.port)
+
+    def _discover_api_path(self):
+        """Discover api version and set api_path
+
+        """
+        resp = self._request('get', self.base_url + '/version')
+        try:
+            version_str = resp['etcdserver']
+        except KeyError:
+            raise exceptions.ApiVersionDiscoveryFailedError(
+                'Malformed response from version API')
+
+        try:
+            version = tuple(int(part) for part in version_str.split('.', 2))
+        except ValueError:
+            raise exceptions.ApiVersionDiscoveryFailedError(
+                'Failed to parse etcd cluster version: %s' % version_str)
+
+        # NOTE(tkajinam): https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/
+        #                 explains mapping between etcd version and available
+        #                 api versions
+        if version >= (3, 4):
+            self._api_path = '/v3/'
+        elif version >= (3, 3):
+            self._api_path = '/v3beta/'
+        else:
+            self._api_path = '/v3alpha/'
 
     def get_url(self, path):
         """Construct a full url to the v3 API given a specific path
@@ -70,20 +110,18 @@ class Etcd3Client(object):
         :param path:
         :return: url
         """
-        host = ('[' + self.host + ']' if (self.host.find(':') != -1)
-                else self.host)
-        base_url = self.protocol + '://' + host + ':' + str(self.port)
-        return base_url + self.api_path + path.lstrip("/")
 
-    def post(self, *args, **kwargs):
-        """helper method for HTTP POST
+        return self.base_url + self.api_path + path.lstrip("/")
+
+    def _request(self, method, *args, **kwargs):
+        """helper method for HTTP requests
 
         :param args:
         :param kwargs:
         :return: json response
         """
         try:
-            resp = self.session.post(*args, **kwargs)
+            resp = getattr(self.session, method)(*args, **kwargs)
             if resp.status_code in _EXCEPTIONS_BY_CODE:
                 raise _EXCEPTIONS_BY_CODE[resp.status_code](
                     resp.text,
@@ -96,6 +134,15 @@ class Etcd3Client(object):
         except requests.exceptions.ConnectionError as ex:
             raise exceptions.ConnectionFailedError(str(ex))
         return resp.json()
+
+    def post(self, *args, **kwargs):
+        """helper method for HTTP POST
+
+        :param args:
+        :param kwargs:
+        :return: json response
+        """
+        return self._request('post', *args, **kwargs)
 
     def status(self):
         """Status gets the status of the etcd cluster member.

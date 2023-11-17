@@ -13,6 +13,7 @@
 from unittest import mock
 
 from etcd3gw.client import Etcd3Client
+from etcd3gw.exceptions import ApiVersionDiscoveryFailedError
 from etcd3gw.exceptions import Etcd3Exception
 from etcd3gw.exceptions import InternalServerError
 from etcd3gw.tests import base
@@ -20,26 +21,115 @@ from etcd3gw.tests import base
 
 class TestEtcd3Gateway(base.TestCase):
 
-    def test_client_default(self):
+    def test_client_version_discovery(self):
         client = Etcd3Client()
-        self.assertEqual("http://localhost:2379%slease/grant" %
-                         client.api_path,
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.json.return_value = {
+                "etcdserver": "3.4.0",
+                "etcdcluster": "3.0.0"
+            }
+            mock_session.get.return_value = mock_response
+            self.assertEqual("http://localhost:2379",
+                             client.base_url)
+            self.assertEqual("http://localhost:2379/v3/lease/grant",
+                             client.get_url("/lease/grant"))
+
+    def test_client_version_discovery_v3beta(self):
+        client = Etcd3Client()
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.json.return_value = {
+                "etcdserver": "3.3.0",
+                "etcdcluster": "3.0.0"
+            }
+            mock_session.get.return_value = mock_response
+            self.assertEqual("http://localhost:2379",
+                             client.base_url)
+            self.assertEqual("http://localhost:2379/v3beta/lease/grant",
+                             client.get_url("/lease/grant"))
+
+    def test_client_version_discovery_v3alpha(self):
+        client = Etcd3Client()
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.json.return_value = {
+                "etcdserver": "3.2.0",
+                "etcdcluster": "3.0.0"
+            }
+            mock_session.get.return_value = mock_response
+            self.assertEqual("http://localhost:2379",
+                             client.base_url)
+            self.assertEqual("http://localhost:2379/v3alpha/lease/grant",
+                             client.get_url("/lease/grant"))
+
+    def test_client_version_discovery_fail(self):
+        client = Etcd3Client()
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 500
+            mock_response.reason = "Internal Server Error"
+            mock_session.get.return_value = mock_response
+            self.assertRaises(
+                Etcd3Exception,
+                client.get_url, "/lease/grant")
+
+    def test_client_version_discovery_version_absent(self):
+        client = Etcd3Client()
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.json.return_value = {}
+            mock_session.get.return_value = mock_response
+            self.assertRaises(
+                ApiVersionDiscoveryFailedError,
+                client.get_url, "/lease/grant")
+
+    def test_client_version_discovery_version_malformed(self):
+        client = Etcd3Client()
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.json.return_value = {
+                "etcdserver": "3.2.a",
+                "etcdcluster": "3.0.0"
+            }
+            mock_session.get.return_value = mock_response
+            self.assertRaises(
+                ApiVersionDiscoveryFailedError,
+                client.get_url, "/lease/grant")
+
+    def test_client_api_path(self):
+        client = Etcd3Client(api_path='/v3/')
+        self.assertEqual("http://localhost:2379",
+                         client.base_url)
+        self.assertEqual("http://localhost:2379/v3/lease/grant",
                          client.get_url("/lease/grant"))
 
     def test_client_ipv4(self):
-        client = Etcd3Client(host="127.0.0.1")
-        self.assertEqual("http://127.0.0.1:2379%slease/grant" %
-                         client.api_path,
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
+        self.assertEqual("http://127.0.0.1:2379",
+                         client.base_url)
+        self.assertEqual("http://127.0.0.1:2379/v3/lease/grant",
                          client.get_url("/lease/grant"))
 
     def test_client_ipv6(self):
-        client = Etcd3Client(host="::1")
-        self.assertEqual("http://[::1]:2379%slease/grant" %
-                         client.api_path,
+        client = Etcd3Client(host="::1", api_path='/v3/')
+        self.assertEqual("http://[::1]:2379",
+                         client.base_url)
+        self.assertEqual("http://[::1]:2379/v3/lease/grant",
                          client.get_url("/lease/grant"))
 
     def test_client_bad_request(self):
-        client = Etcd3Client(host="127.0.0.1")
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
         with mock.patch.object(client, "session") as mock_session:
             mock_response = mock.Mock()
             mock_response.status_code = 400
@@ -60,7 +150,7 @@ class TestEtcd3Gateway(base.TestCase):
 }''')
 
     def test_client_exceptions_by_code(self):
-        client = Etcd3Client(host="127.0.0.1")
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
         with mock.patch.object(client, "session") as mock_session:
             mock_response = mock.Mock()
             mock_response.status_code = 500
@@ -77,8 +167,3 @@ class TestEtcd3Gateway(base.TestCase):
                 self.assertEqual(e.detail_text, '''{
 "error": "etcdserver: unable to reach quorum"
 }''')
-
-    def test_client_api_path(self):
-        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
-        self.assertEqual("http://127.0.0.1:2379/v3/lease/grant",
-                         client.get_url("/lease/grant"))

@@ -35,3 +35,7 @@ class ConnectionTimeoutError(Etcd3Exception):
 
 class PreconditionFailedError(Etcd3Exception):
     pass
+
+
+class ApiVersionDiscoveryFailedError(Etcd3Exception):
+    pass
