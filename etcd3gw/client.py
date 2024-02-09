@@ -56,8 +56,7 @@ class Etcd3Client(object):
         self.protocol = protocol
 
         self.session = requests.Session()
-        if timeout is not None:
-            self.session.timeout = timeout
+        self.timeout = timeout
         if ca_cert is not None:
             self.session.verify = ca_cert
         if cert_cert is not None and cert_key is not None:
@@ -121,7 +120,8 @@ class Etcd3Client(object):
         :return: json response
         """
         try:
-            resp = getattr(self.session, method)(*args, **kwargs)
+            resp = getattr(self.session, method)(*args, timeout=self.timeout,
+                                                 **kwargs)
             if resp.status_code in _EXCEPTIONS_BY_CODE:
                 raise _EXCEPTIONS_BY_CODE[resp.status_code](
                     resp.text,

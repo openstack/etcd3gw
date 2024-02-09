@@ -10,12 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import requests.exceptions
 from unittest import mock
 
 from etcd3gw.client import Etcd3Client
-from etcd3gw.exceptions import ApiVersionDiscoveryFailedError
-from etcd3gw.exceptions import Etcd3Exception
-from etcd3gw.exceptions import InternalServerError
+from etcd3gw import exceptions as exc
 from etcd3gw.tests import base
 
 
@@ -77,7 +76,7 @@ class TestEtcd3Gateway(base.TestCase):
             mock_response.reason = "Internal Server Error"
             mock_session.get.return_value = mock_response
             self.assertRaises(
-                Etcd3Exception,
+                exc.Etcd3Exception,
                 client.get_url, "/lease/grant")
 
     def test_client_version_discovery_version_absent(self):
@@ -89,7 +88,7 @@ class TestEtcd3Gateway(base.TestCase):
             mock_response.json.return_value = {}
             mock_session.get.return_value = mock_response
             self.assertRaises(
-                ApiVersionDiscoveryFailedError,
+                exc.ApiVersionDiscoveryFailedError,
                 client.get_url, "/lease/grant")
 
     def test_client_version_discovery_version_malformed(self):
@@ -104,7 +103,7 @@ class TestEtcd3Gateway(base.TestCase):
             }
             mock_session.get.return_value = mock_response
             self.assertRaises(
-                ApiVersionDiscoveryFailedError,
+                exc.ApiVersionDiscoveryFailedError,
                 client.get_url, "/lease/grant")
 
     def test_client_api_path(self):
@@ -128,6 +127,55 @@ class TestEtcd3Gateway(base.TestCase):
         self.assertEqual("http://[::1]:2379/v3/lease/grant",
                          client.get_url("/lease/grant"))
 
+    def test_client_status(self):
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.text = "{}"
+            mock_session.post.return_value = mock_response
+            client.status()
+            mock_session.post.assert_has_calls([
+                mock.call('http://127.0.0.1:2379/v3/maintenance/status',
+                          timeout=None, json={})
+            ])
+
+    def test_client_with_timeout(self):
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/', timeout=60)
+        with mock.patch.object(client, "session") as mock_session:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.reason = "OK"
+            mock_response.text = "{}"
+            mock_session.post.return_value = mock_response
+            client.status()
+            mock_session.post.assert_has_calls([
+                mock.call('http://127.0.0.1:2379/v3/maintenance/status',
+                          timeout=60, json={})
+            ])
+
+    def test_client_timed_out(self):
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/', timeout=60)
+        with mock.patch.object(client, "session") as mock_session:
+            mock_session.post.side_effect = requests.exceptions.Timeout()
+            self.assertRaises(exc.ConnectionTimeoutError, client.status)
+            mock_session.post.assert_has_calls([
+                mock.call('http://127.0.0.1:2379/v3/maintenance/status',
+                          timeout=60, json={})
+            ])
+
+    def test_client_connection_error(self):
+        client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
+        with mock.patch.object(client, "session") as mock_session:
+            mock_session.post.side_effect = \
+                requests.exceptions.ConnectionError()
+            self.assertRaises(exc.ConnectionFailedError, client.status)
+            mock_session.post.assert_has_calls([
+                mock.call('http://127.0.0.1:2379/v3/maintenance/status',
+                          timeout=None, json={})
+            ])
+
     def test_client_bad_request(self):
         client = Etcd3Client(host="127.0.0.1", api_path='/v3/')
         with mock.patch.object(client, "session") as mock_session:
@@ -142,7 +190,7 @@ class TestEtcd3Gateway(base.TestCase):
             try:
                 client.status()
                 self.assertFalse(True)
-            except Etcd3Exception as e:
+            except exc.Etcd3Exception as e:
                 self.assertEqual(str(e), "Bad Request")
                 self.assertEqual(e.detail_text, '''{
 "error": "etcdserver: mvcc: required revision has been compacted",
@@ -162,7 +210,7 @@ class TestEtcd3Gateway(base.TestCase):
             try:
                 client.status()
                 self.assertFalse(True)
-            except InternalServerError as e:
+            except exc.InternalServerError as e:
                 self.assertEqual(str(e), "Internal Server Error")
                 self.assertEqual(e.detail_text, '''{
 "error": "etcdserver: unable to reach quorum"
