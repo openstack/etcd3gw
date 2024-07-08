@@ -290,6 +290,51 @@ class TestEtcd3Gateway(base.TestCase):
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
+    def test_watch_huge_payload(self):
+        key = '/%s-watch_key/watch/huge_payload' % str(uuid.uuid4())
+
+        def update_etcd(v):
+            print(f"put({key}, {v}")
+            self.client.put(key, v)
+            out = self.client.get(key)
+            self.assertEqual([v.encode("latin-1")], out)
+
+        def update_key():
+            # sleep to make watch can get the event
+            time.sleep(3)
+            update_etcd('0' * 10000)
+            time.sleep(1)
+            update_etcd('1' * 10000)
+            time.sleep(1)
+            update_etcd('2' * 10000)
+            time.sleep(1)
+            update_etcd('3' * 10000)
+            time.sleep(1)
+
+        t = threading.Thread(name="update_key_huge", target=update_key)
+        t.start()
+
+        change_count = 0
+        events_iterator, cancel = self.client.watch(key)
+        for event in events_iterator:
+            self.assertEqual(event['kv']['key'], key.encode("latin-1"))
+            self.assertEqual(
+                event['kv']['value'],
+                (str(change_count) * 10000).encode("latin-1"),
+            )
+
+            # if cancel worked, we should not receive event 3
+            assert event['kv']['value'][0] != b'3'
+
+            change_count += 1
+            if change_count > 2:
+                # if cancel not work, we will block in this for-loop forever
+                cancel()
+
+        t.join()
+
+    @unittest.skipUnless(
+        _is_etcd3_running(), "etcd3 is not available")
     def test_watch_prefix(self):
         key = '/%s-watch_prefix/watch/prefix/' % str(uuid.uuid4())
 

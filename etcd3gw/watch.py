@@ -21,6 +21,10 @@ from etcd3gw.utils import _get_threadpool_executor
 def _watch(resp, callback):
     for line in resp.iter_content(chunk_size=None, decode_unicode=False):
         decoded_line = line.decode('utf-8')
+        # Skip a possible empty line (only "\n")
+        # https://bugs.launchpad.net/python-etcd3gw/+bug/2072492
+        if not decoded_line.strip():
+            continue
         payload = json.loads(decoded_line)
         if 'created' in payload['result']:
             if payload['result']['created']:
