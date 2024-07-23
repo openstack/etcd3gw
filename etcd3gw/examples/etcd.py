@@ -10,12 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-try:
-    # Python 3.8 : time.clock was deprecated and removed.
-    from time import perf_counter as clock
-except ImportError:
-    from time import clock
-
+import time
 
 from etcd3gw.client import Etcd3Client
 from etcd3gw.lock import Lock
@@ -59,7 +54,7 @@ def main():
     print("Key delete foo-unknown : %r" % result)
 
     print('>>>> Lock')
-    lock = Lock('xyz-%s' % clock(), ttl=10000, client=client)
+    lock = Lock('xyz-%s' % time.perf_counter(), ttl=10000, client=client)
     result = lock.acquire()
     print("acquire : %r" % result)
     result = lock.refresh()
