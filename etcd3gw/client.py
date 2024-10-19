@@ -41,7 +41,7 @@ _EXCEPTIONS_BY_CODE = {
 DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH')
 
 
-class Etcd3Client(object):
+class Etcd3Client:
     def __init__(self, host='localhost', port=2379, protocol="http",
                  ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
                  api_path=DEFAULT_API_PATH):
