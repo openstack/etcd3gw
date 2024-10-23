@@ -7,7 +7,7 @@ You can find examples in ``etcd3gw/examples`` and look at ``etcd3gw/client.py``.
 Basic usage example::
 
     from etcd3gw.client import Etcd3Client
- 
+
     client = Etcd3Client(host='localhost', port=2379)
 
     # Put key
