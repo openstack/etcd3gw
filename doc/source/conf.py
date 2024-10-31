@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # etcd3-gateway documentation build configuration file, created by
 # sphinx-quickstart on Sat Mar 25 20:42:09 2017.

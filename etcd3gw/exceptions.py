@@ -13,7 +13,7 @@
 
 class Etcd3Exception(Exception):
     def __init__(self, detail_text=None, *args):
-        super(Etcd3Exception, self).__init__(*args)
+        super().__init__(*args)
         self.detail_text = detail_text
 
 

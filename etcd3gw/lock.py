@@ -17,7 +17,7 @@ from etcd3gw.utils import DEFAULT_TIMEOUT
 from etcd3gw.utils import LOCK_PREFIX
 
 
-class Lock(object):
+class Lock:
     def __init__(self, name, ttl=DEFAULT_TIMEOUT, client=None):
         """Create a lock using the given name with specified timeout
 

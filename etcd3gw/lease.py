@@ -13,7 +13,7 @@
 from etcd3gw.utils import _decode
 
 
-class Lease(object):
+class Lease:
     def __init__(self, id, client=None):
         """Lease object for expiring keys
 

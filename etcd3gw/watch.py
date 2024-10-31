@@ -39,7 +39,7 @@ def _watch(resp, callback):
                 callback(event)
 
 
-class Watcher(object):
+class Watcher:
 
     KW_ARGS = ['start_revision', 'progress_notify', 'filters', 'prev_kv']
     KW_ENCODED_ARGS = ['range_end']

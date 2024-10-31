@@ -360,7 +360,7 @@ class TestEtcd3Gateway(base.TestCase):
 
             self.assertEqual(
                 event['kv']['key'],
-                ('%s%s' % (key, change_count)).encode("latin-1"),
+                ('{}{}'.format(key, change_count)).encode("latin-1"),
             )
             self.assertEqual(
                 event['kv']['value'],
