@@ -1,8 +1,7 @@
 - project:
     templates:
       - check-requirements
-      # FIXME: see https://review.opendev.org/747460
-      # - lib-forward-testing-python3
+      - lib-forward-testing-python3
       - openstack-cover-jobs
       - openstack-python3-jobs
       - periodic-stable-jobs
