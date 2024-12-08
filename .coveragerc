@@ -1,10 +1,9 @@
 [run]
 branch = True
-source =
-    etcdgw
+source = etcd3gw
 omit =
-    /*/tests/*
-    /*/examples/*
+    etcd3gw/tests/*
+    etcd3gw/examples/*
 
 [report]
 ignore_errors = True

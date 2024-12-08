@@ -25,9 +25,8 @@ pip-log.txt
 cover/
 .coverage*
 !.coveragerc
+.stestr
 .tox
-nosetests.xml
-.testrepository
 .venv
 
 # Translations

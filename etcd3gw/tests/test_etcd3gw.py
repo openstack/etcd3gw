@@ -45,7 +45,7 @@ def _is_etcd3_running():
 class TestEtcd3Gateway(base.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = Etcd3Client(api_path='/v3/')
+        cls.client = Etcd3Client(api_path='/v3beta/')
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
