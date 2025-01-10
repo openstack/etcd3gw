@@ -50,7 +50,7 @@ def _is_etcd3_running():
 class TestEtcd3Gateway(base.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = Etcd3Client(port=ETCD_PORT, api_path='/v3beta/')
+        cls.client = Etcd3Client(port=ETCD_PORT)
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
@@ -483,6 +483,9 @@ class TestEtcd3Gateway(base.TestCase):
     @mock.patch.object(requests.Response, 'iter_content', new=my_iter_content)
     @mock.patch.object(requests.sessions.Session, 'post')
     def test_watch_unicode(self, mock_post):
+        # NOTE(tkajinam): Bypass version detection
+        self.client._api_path = '/v3/'
+
         mocked_response = requests.Response()
         mocked_response.connection = mock.Mock()
         mock_post.return_value = mocked_response
