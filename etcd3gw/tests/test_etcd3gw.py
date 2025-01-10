@@ -19,6 +19,7 @@ Tests for `etcd3gw` module.
 
 import base64
 import json
+import os
 import requests
 import threading
 import time
@@ -34,9 +35,13 @@ from etcd3gw.tests import base
 from etcd3gw import utils
 
 
+ETCD_URL = os.getenv("TOOZ_TEST_HTTP_URL", "http://localhost:2379")
+ETCD_PORT = int(os.getenv("TOOZ_TEST_ETCD_PORT", 2379))
+
+
 def _is_etcd3_running():
     try:
-        urllib3.PoolManager().request('GET', '127.0.0.1:2379')
+        urllib3.PoolManager().request('GET', ETCD_URL)
         return True
     except urllib3.exceptions.HTTPError:
         return False
@@ -45,7 +50,7 @@ def _is_etcd3_running():
 class TestEtcd3Gateway(base.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.client = Etcd3Client(api_path='/v3beta/')
+        cls.client = Etcd3Client(port=ETCD_PORT, api_path='/v3beta/')
 
     @unittest.skipUnless(
         _is_etcd3_running(), "etcd3 is not available")
