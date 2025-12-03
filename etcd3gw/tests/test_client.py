@@ -215,3 +215,27 @@ class TestEtcd3Gateway(base.TestCase):
                 self.assertEqual(e.detail_text, '''{
 "error": "etcdserver: unable to reach quorum"
 }''')
+
+    def test_client_custom_session_with_pool_configuration(self):
+        from requests.adapters import HTTPAdapter
+
+        custom_session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20)
+
+        custom_session.mount('http://', adapter)
+        custom_session.mount('https://', adapter)
+
+        client = Etcd3Client(api_path='/v3/', session=custom_session)
+
+        self.assertIs(client.session, custom_session)
+
+        with mock.patch.object(custom_session, "post") as mock_post:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {}
+            mock_post.return_value = mock_response
+            client.status()
+
+        http_adapter = client.session.get_adapter('http://localhost:2379')
+        self.assertEqual(
+            http_adapter.poolmanager.connection_pool_kw['maxsize'], 20)
