@@ -44,23 +44,34 @@ DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH')
 class Etcd3Client:
     def __init__(self, host='localhost', port=2379, protocol="http",
                  ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
-                 api_path=DEFAULT_API_PATH):
+                 api_path=DEFAULT_API_PATH, session=None):
         """Construct an client to talk to etcd3's grpc-gateway's /v3 HTTP API
 
-        :param host:
-        :param port:
-        :param protocol:
+        :param host: etcd host
+        :param port: etcd port
+        :param protocol: protocol (http or https)
+        :param ca_cert: CA certificate for SSL/TLS verification
+        :param cert_key: client certificate key
+        :param cert_cert: client certificate
+        :param timeout: request timeout
+        :param api_path: API path (default to auto-discovery)
+        :param session: optional preconfigured request.session object.
+                        If not provided new session will be created
         """
         self.host = host
         self.port = port
         self.protocol = protocol
 
-        self.session = requests.Session()
+        if session is not None:
+            self.session = session
+        else:
+            self.session = requests.Session()
+            if ca_cert is not None:
+                self.session.verify = ca_cert
+            if cert_cert is not None and cert_key is not None:
+                self.session.cert = (cert_cert, cert_key)
+
         self.timeout = timeout
-        if ca_cert is not None:
-            self.session.verify = ca_cert
-        if cert_cert is not None and cert_key is not None:
-            self.session.cert = (cert_cert, cert_key)
         self._api_path = api_path
 
     @property
@@ -459,7 +470,8 @@ class Etcd3Client:
 
 def client(host='localhost', port=2379,
            ca_cert=None, cert_key=None, cert_cert=None,
-           timeout=None, protocol="http", api_path=DEFAULT_API_PATH):
+           timeout=None, protocol="http", api_path=DEFAULT_API_PATH,
+           session=None):
     """Return an instance of an Etcd3Client."""
     return Etcd3Client(host=host,
                        port=port,
@@ -468,4 +480,5 @@ def client(host='localhost', port=2379,
                        cert_cert=cert_cert,
                        timeout=timeout,
                        api_path=api_path,
-                       protocol=protocol)
+                       protocol=protocol,
+                       session=session)

@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Now, we are able to pass optional ``session`` parameter to Etcd3Client
+    allowing users to provide a pre-configured ``requests.Session`` object
+    with custom pool settings etc.
+    See `2125229 <https://bugs.launchpad.net/python-etcd3gw/+bug/2125229>`_
+    more details.
