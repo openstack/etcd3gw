@@ -40,14 +40,11 @@ def _watch(resp, callback):
 
 
 class Watcher:
-
     KW_ARGS = ['start_revision', 'progress_notify', 'filters', 'prev_kv']
     KW_ENCODED_ARGS = ['range_end']
 
     def __init__(self, client, key, callback, **kwargs):
-        create_watch = {
-            'key': _encode(key)
-        }
+        create_watch = {'key': _encode(key)}
 
         for arg in kwargs:
             if arg in self.KW_ARGS:
@@ -55,12 +52,10 @@ class Watcher:
             elif arg in self.KW_ENCODED_ARGS:
                 create_watch[arg] = _encode(kwargs[arg])
 
-        create_request = {
-            "create_request": create_watch
-        }
-        self._response = client.session.post(client.get_url('/watch'),
-                                             json=create_request,
-                                             stream=True)
+        create_request = {"create_request": create_watch}
+        self._response = client.session.post(
+            client.get_url('/watch'), json=create_request, stream=True
+        )
 
         clazz = _get_threadpool_executor()
         self._executor = clazz(max_workers=2)
@@ -68,12 +63,14 @@ class Watcher:
 
     def stop(self):
         try:
-            s = socket.fromfd(self._response.raw._fp.fileno(),
-                              socket.AF_INET,
-                              socket.SOCK_STREAM)
+            s = socket.fromfd(
+                self._response.raw._fp.fileno(),
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+            )
             s.shutdown(socket.SHUT_RDWR)
             s.close()
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         self._response.connection.close()
         self._executor.shutdown(wait=False)

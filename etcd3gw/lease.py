@@ -33,8 +33,9 @@ class Lease:
 
         :return:
         """
-        self.client.post(self.client.get_url("/kv/lease/revoke"),
-                         json={"ID": self.id})
+        self.client.post(
+            self.client.get_url("/kv/lease/revoke"), json={"ID": self.id}
+        )
         return True
 
     def ttl(self):
@@ -46,8 +47,9 @@ class Lease:
 
         :return:
         """
-        result = self.client.post(self.client.get_url("/kv/lease/timetolive"),
-                                  json={"ID": self.id})
+        result = self.client.post(
+            self.client.get_url("/kv/lease/timetolive"), json={"ID": self.id}
+        )
         return int(result['TTL'])
 
     def refresh(self):
@@ -62,8 +64,9 @@ class Lease:
             according to etcd documentation.
             https://etcd.io/docs/v3.5/dev-guide/apispec/swagger/rpc.swagger.json
         """
-        result = self.client.post(self.client.get_url("/lease/keepalive"),
-                                  json={"ID": self.id})
+        result = self.client.post(
+            self.client.get_url("/lease/keepalive"), json={"ID": self.id}
+        )
         return int(result['result'].get('TTL', -1))
 
     def keys(self):
@@ -71,8 +74,9 @@ class Lease:
 
         :return:
         """
-        result = self.client.post(self.client.get_url("/kv/lease/timetolive"),
-                                  json={"ID": self.id,
-                                        "keys": True})
+        result = self.client.post(
+            self.client.get_url("/kv/lease/timetolive"),
+            json={"ID": self.id, "keys": True},
+        )
         keys = result['keys'] if 'keys' in result else []
         return [_decode(key) for key in keys]

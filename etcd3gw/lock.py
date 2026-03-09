@@ -44,24 +44,24 @@ class Lock:
         base64_key = _encode(self.key)
         base64_value = _encode(self._uuid)
         txn = {
-            'compare': [{
-                'key': base64_key,
-                'result': 'EQUAL',
-                'target': 'CREATE',
-                'create_revision': 0
-            }],
-            'success': [{
-                'request_put': {
+            'compare': [
+                {
                     'key': base64_key,
-                    'value': base64_value,
-                    'lease': self.lease.id
+                    'result': 'EQUAL',
+                    'target': 'CREATE',
+                    'create_revision': 0,
                 }
-            }],
-            'failure': [{
-                'request_range': {
-                    'key': base64_key
+            ],
+            'success': [
+                {
+                    'request_put': {
+                        'key': base64_key,
+                        'value': base64_value,
+                        'lease': self.lease.id,
+                    }
                 }
-            }]
+            ],
+            'failure': [{'request_range': {'key': base64_key}}],
         }
         result = self.client.transaction(txn)
         if 'succeeded' in result:
@@ -74,17 +74,15 @@ class Lock:
         base64_value = _encode(self._uuid)
 
         txn = {
-            'compare': [{
-                'key': base64_key,
-                'result': 'EQUAL',
-                'target': 'VALUE',
-                'value': base64_value
-            }],
-            'success': [{
-                'request_delete_range': {
-                    'key': base64_key
+            'compare': [
+                {
+                    'key': base64_key,
+                    'result': 'EQUAL',
+                    'target': 'VALUE',
+                    'value': base64_value,
                 }
-            }]
+            ],
+            'success': [{'request_delete_range': {'key': base64_key}}],
         }
 
         result = self.client.transaction(txn)

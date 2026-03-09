@@ -73,8 +73,13 @@ html_static_path = []
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'etcd3-gateway.tex', 'etcd3-gateway Documentation',
-     'Davanum Srinivas', 'manual'),
+    (
+        master_doc,
+        'etcd3-gateway.tex',
+        'etcd3-gateway Documentation',
+        'Davanum Srinivas',
+        'manual',
+    ),
 ]
 
 # -- Options for manual page output ---------------------------------------
@@ -82,8 +87,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'etcd3-gateway', 'etcd3-gateway Documentation',
-     [author], 1)
+    (master_doc, 'etcd3-gateway', 'etcd3-gateway Documentation', [author], 1)
 ]
 
 # -- Options for intersphinx extension ------------------------------------

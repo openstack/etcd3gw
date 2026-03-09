@@ -35,3 +35,17 @@ Repository = "https://opendev.org/openstack/etcd3gw"
 packages = [
     "etcd3gw"
 ]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.format]
+quote-style = "preserve"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["E4", "E5", "E7", "E9", "F", "G", "LOG", "S", "UP"]
+external = ["H"]
+
+[tool.ruff.lint.per-file-ignores]
+"etcd3gw/tests/*" = ["S"]

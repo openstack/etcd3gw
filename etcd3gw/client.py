@@ -42,9 +42,18 @@ DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH')
 
 
 class Etcd3Client:
-    def __init__(self, host='localhost', port=2379, protocol="http",
-                 ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
-                 api_path=DEFAULT_API_PATH, session=None):
+    def __init__(
+        self,
+        host='localhost',
+        port=2379,
+        protocol="http",
+        ca_cert=None,
+        cert_key=None,
+        cert_cert=None,
+        timeout=None,
+        api_path=DEFAULT_API_PATH,
+        session=None,
+    ):
         """Construct an client to talk to etcd3's grpc-gateway's /v3 HTTP API
 
         :param host: etcd host
@@ -83,26 +92,27 @@ class Etcd3Client:
 
     @property
     def base_url(self):
-        host = ('[' + self.host + ']' if (self.host.find(':') != -1)
-                else self.host)
+        host = (
+            '[' + self.host + ']' if (self.host.find(':') != -1) else self.host
+        )
         return self.protocol + '://' + host + ':' + str(self.port)
 
     def _discover_api_path(self):
-        """Discover api version and set api_path
-
-        """
+        """Discover api version and set api_path"""
         resp = self._request('get', self.base_url + '/version')
         try:
             version_str = resp['etcdserver']
         except KeyError:
             raise exceptions.ApiVersionDiscoveryFailedError(
-                'Malformed response from version API')
+                'Malformed response from version API'
+            )
 
         try:
             version = tuple(int(part) for part in version_str.split('.', 2))
         except ValueError:
             raise exceptions.ApiVersionDiscoveryFailedError(
-                'Failed to parse etcd cluster version: %s' % version_str)
+                f'Failed to parse etcd cluster version: {version_str}'
+            )
 
         # NOTE(tkajinam): https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/
         #                 explains mapping between etcd version and available
@@ -131,12 +141,12 @@ class Etcd3Client:
         :return: json response
         """
         try:
-            resp = getattr(self.session, method)(*args, timeout=self.timeout,
-                                                 **kwargs)
+            resp = getattr(self.session, method)(
+                *args, timeout=self.timeout, **kwargs
+            )
             if resp.status_code in _EXCEPTIONS_BY_CODE:
                 raise _EXCEPTIONS_BY_CODE[resp.status_code](
-                    resp.text,
-                    resp.reason
+                    resp.text, resp.reason
                 )
             if resp.status_code != requests.codes['ok']:
                 raise exceptions.Etcd3Exception(resp.text, resp.reason)
@@ -160,16 +170,14 @@ class Etcd3Client:
 
         :return: json response
         """
-        return self.post(self.get_url("/maintenance/status"),
-                         json={})
+        return self.post(self.get_url("/maintenance/status"), json={})
 
     def members(self):
         """Lists all the members in the cluster.
 
         :return: json response
         """
-        result = self.post(self.get_url("/cluster/member/list"),
-                           json={})
+        result = self.post(self.get_url("/cluster/member/list"), json={})
         return result['members']
 
     def lease(self, ttl=DEFAULT_TIMEOUT):
@@ -178,8 +186,9 @@ class Etcd3Client:
         :param ttl: timeout
         :return: Lease object
         """
-        result = self.post(self.get_url("/lease/grant"),
-                           json={"TTL": ttl, "ID": 0})
+        result = self.post(
+            self.get_url("/lease/grant"), json={"TTL": ttl, "ID": 0}
+        )
         return Lease(int(result['ID']), client=self)
 
     def lock(self, id=None, ttl=DEFAULT_TIMEOUT):
@@ -211,19 +220,23 @@ class Etcd3Client:
         base64_key = _encode(key)
         base64_value = _encode(value)
         txn = {
-            'compare': [{
-                'key': base64_key,
-                'result': 'EQUAL',
-                'target': 'CREATE',
-                'create_revision': 0
-            }],
-            'success': [{
-                'request_put': {
+            'compare': [
+                {
                     'key': base64_key,
-                    'value': base64_value,
+                    'result': 'EQUAL',
+                    'target': 'CREATE',
+                    'create_revision': 0,
                 }
-            }],
-            'failure': []
+            ],
+            'success': [
+                {
+                    'request_put': {
+                        'key': base64_key,
+                        'value': base64_value,
+                    }
+                }
+            ],
+            'failure': [],
         }
         if lease:
             txn['success'][0]['request_put']['lease'] = lease.id
@@ -243,17 +256,15 @@ class Etcd3Client:
         :param lease:
         :return: boolean
         """
-        payload = {
-            "key": _encode(key),
-            "value": _encode(value)
-        }
+        payload = {"key": _encode(key), "value": _encode(value)}
         if lease:
             payload['lease'] = lease.id
         self.post(self.get_url("/kv/put"), json=payload)
         return True
 
-    def get(self, key, metadata=False, sort_order=None,
-            sort_target=None, **kwargs):
+    def get(
+        self, key, metadata=False, sort_order=None, sort_target=None, **kwargs
+    ):
         """Range gets the keys in the range from the key-value store.
 
         :param key:
@@ -275,8 +286,10 @@ class Etcd3Client:
             if sort_target:
                 target = _SORT_TARGET.index(sort_target)
         except ValueError:
-            raise ValueError('sort_target must be one of "key", '
-                             '"version", "create", "mod" or "value"')
+            raise ValueError(
+                'sort_target must be one of "key", '
+                '"version", "create", "mod" or "value"'
+            )
 
         payload = {
             "key": _encode(key),
@@ -284,16 +297,17 @@ class Etcd3Client:
             "sort_target": target,
         }
         payload.update(kwargs)
-        result = self.post(self.get_url("/kv/range"),
-                           json=payload)
+        result = self.post(self.get_url("/kv/range"), json=payload)
         if 'kvs' not in result:
             return []
 
         if metadata:
+
             def value_with_metadata(item):
                 item['key'] = _decode(item['key'])
                 value = _decode(item.pop('value', ''))
                 return value, item
+
             return [value_with_metadata(item) for item in result['kvs']]
 
         return [_decode(item.get('value', '')) for item in result['kvs']]
@@ -319,11 +333,13 @@ class Etcd3Client:
 
         :returns: sequence of (value, metadata) tuples
         """
-        return self.get(key_prefix,
-                        metadata=True,
-                        range_end=_encode(_increment_last_byte(key_prefix)),
-                        sort_order=sort_order,
-                        sort_target=sort_target)
+        return self.get(
+            key_prefix,
+            metadata=True,
+            range_end=_encode(_increment_last_byte(key_prefix)),
+            sort_order=sort_order,
+            sort_target=sort_target,
+        )
 
     def replace(self, key, initial_value, new_value):
         """Atomically replace the value of a key with a new value.
@@ -345,19 +361,23 @@ class Etcd3Client:
         base64_initial_value = _encode(initial_value)
         base64_new_value = _encode(new_value)
         txn = {
-            'compare': [{
-                'key': base64_key,
-                'result': 'EQUAL',
-                'target': 'VALUE',
-                'value': base64_initial_value
-            }],
-            'success': [{
-                'request_put': {
+            'compare': [
+                {
                     'key': base64_key,
-                    'value': base64_new_value,
+                    'result': 'EQUAL',
+                    'target': 'VALUE',
+                    'value': base64_initial_value,
                 }
-            }],
-            'failure': []
+            ],
+            'success': [
+                {
+                    'request_put': {
+                        'key': base64_key,
+                        'value': base64_new_value,
+                    }
+                }
+            ],
+            'failure': [],
         }
         result = self.transaction(txn)
         if 'succeeded' in result:
@@ -379,8 +399,7 @@ class Etcd3Client:
         }
         payload.update(kwargs)
 
-        result = self.post(self.get_url("/kv/deleterange"),
-                           json=payload)
+        result = self.post(self.get_url("/kv/deleterange"), json=payload)
         if 'deleted' in result:
             return True
         return False
@@ -388,7 +407,8 @@ class Etcd3Client:
     def delete_prefix(self, key_prefix):
         """Delete a range of keys with a prefix in etcd."""
         return self.delete(
-            key_prefix, range_end=_encode(_increment_last_byte(key_prefix)))
+            key_prefix, range_end=_encode(_increment_last_byte(key_prefix))
+        )
 
     def transaction(self, txn):
         """Txn processes multiple requests in a single transaction.
@@ -400,8 +420,7 @@ class Etcd3Client:
         :param txn:
         :return:
         """
-        return self.post(self.get_url("/kv/txn"),
-                         data=json.dumps(txn))
+        return self.post(self.get_url("/kv/txn"), data=json.dumps(txn))
 
     def watch(self, key, **kwargs):
         """Watch a key.
@@ -437,8 +456,7 @@ class Etcd3Client:
 
     def watch_prefix(self, key_prefix, **kwargs):
         """The same as ``watch``, but watches a range of keys with a prefix."""
-        kwargs['range_end'] = \
-            _increment_last_byte(key_prefix)
+        kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch(key_prefix, **kwargs)
 
     def watch_once(self, key, timeout=None, **kwargs):
@@ -463,22 +481,30 @@ class Etcd3Client:
 
     def watch_prefix_once(self, key_prefix, timeout=None, **kwargs):
         """Watches a range of keys with a prefix, similar to watch_once"""
-        kwargs['range_end'] = \
-            _increment_last_byte(key_prefix)
+        kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch_once(key_prefix, timeout=timeout, **kwargs)
 
 
-def client(host='localhost', port=2379,
-           ca_cert=None, cert_key=None, cert_cert=None,
-           timeout=None, protocol="http", api_path=DEFAULT_API_PATH,
-           session=None):
+def client(
+    host='localhost',
+    port=2379,
+    ca_cert=None,
+    cert_key=None,
+    cert_cert=None,
+    timeout=None,
+    protocol="http",
+    api_path=DEFAULT_API_PATH,
+    session=None,
+):
     """Return an instance of an Etcd3Client."""
-    return Etcd3Client(host=host,
-                       port=port,
-                       ca_cert=ca_cert,
-                       cert_key=cert_key,
-                       cert_cert=cert_cert,
-                       timeout=timeout,
-                       api_path=api_path,
-                       protocol=protocol,
-                       session=session)
+    return Etcd3Client(
+        host=host,
+        port=port,
+        ca_cert=ca_cert,
+        cert_key=cert_key,
+        cert_cert=cert_cert,
+        timeout=timeout,
+        api_path=api_path,
+        protocol=protocol,
+        session=session,
+    )
