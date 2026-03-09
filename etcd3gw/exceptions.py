@@ -12,7 +12,7 @@
 
 
 class Etcd3Exception(Exception):
-    def __init__(self, detail_text=None, *args):
+    def __init__(self, detail_text: str | None = None, *args: object) -> None:
         super().__init__(*args)
         self.detail_text = detail_text
 

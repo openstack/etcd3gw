@@ -16,7 +16,7 @@ from etcd3gw.client import Etcd3Client
 from etcd3gw.lock import Lock
 
 
-def main():
+def main() -> None:
     client = Etcd3Client()
 
     print('>>>> Status')

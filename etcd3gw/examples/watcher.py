@@ -13,7 +13,7 @@
 from etcd3gw.client import Etcd3Client
 
 
-def main():
+def main() -> None:
     client = Etcd3Client()
     events, cancel = client.watch('foo')
     for event in events:

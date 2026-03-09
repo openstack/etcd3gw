@@ -23,9 +23,9 @@ import os
 import requests
 import threading
 import time
+import unittest
 import uuid
 
-from testtools.testcase import unittest
 from unittest import mock
 import urllib3
 
@@ -471,7 +471,7 @@ class TestEtcd3Gateway(base.TestCase):
         )
 
         if not kwargs.get('decode_unicode', False):
-            payload = payload.encode()
+            return [payload.encode()]
         return [payload]
 
     @mock.patch.object(requests.Response, 'iter_content', new=my_iter_content)

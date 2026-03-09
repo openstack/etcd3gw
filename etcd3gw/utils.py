@@ -12,41 +12,43 @@
 
 import base64
 import sys
+import types
+from typing import TypeAlias
 
 import futurist
 
 bytes_types = (bytes, bytearray)
 
 
-def _encode(data):
+def _encode(data: str | bytes | bytearray) -> str:
     """Encode the given data using base-64
 
     :param data:
     :return: base-64 encoded string
     """
-    if not isinstance(data, bytes_types):
+    if not isinstance(data, (bytes, bytearray)):
         data = str(data).encode("latin-1")
     return base64.b64encode(data).decode("utf-8")
 
 
-def _decode(data):
+def _decode(data: str | bytes | bytearray) -> bytes:
     """Decode the base-64 encoded string
 
     :param data:
     :return: decoded data
     """
-    if not isinstance(data, bytes_types):
+    if not isinstance(data, (bytes, bytearray)):
         data = str(data).encode("latin-1")
     return base64.b64decode(data.decode("utf-8"))
 
 
-def _increment_last_byte(data):
+def _increment_last_byte(data: str | bytes | bytearray) -> bytes:
     """Get the last byte in the array and increment it
 
     :param bytes_string:
     :return:
     """
-    if not isinstance(data, bytes_types):
+    if not isinstance(data, (bytes, bytearray)):
         if isinstance(data, str):
             data = data.encode('utf-8')
         else:
@@ -56,17 +58,19 @@ def _increment_last_byte(data):
     return bytes(s)
 
 
-DEFAULT_TIMEOUT = 30
-LOCK_PREFIX = '/locks/'
+DEFAULT_TIMEOUT: int = 30
+LOCK_PREFIX: str = '/locks/'
 
 
-def _import_module(import_str):
+def _import_module(import_str: str) -> types.ModuleType:
     """Import a module."""
     __import__(import_str)
     return sys.modules[import_str]
 
 
-def _try_import(import_str, default=None):
+def _try_import(
+    import_str: str, default: types.ModuleType | None = None
+) -> types.ModuleType | None:
     """Try to import a module and if it fails return default."""
     try:
         return _import_module(import_str)
@@ -75,11 +79,20 @@ def _try_import(import_str, default=None):
 
 
 # These may or may not exist; so carefully import them if we can...
-_eventlet = _try_import('eventlet')
-_patcher = _try_import('eventlet.patcher')
+_eventlet: types.ModuleType | None = _try_import('eventlet')
+_patcher: types.ModuleType | None = _try_import('eventlet.patcher')
+
+Executor: TypeAlias = (
+    futurist.ThreadPoolExecutor | futurist.GreenThreadPoolExecutor
+)
 
 
-def _get_threadpool_executor():
-    if all((_eventlet, _patcher)) and _patcher.is_monkey_patched('thread'):
-        return futurist.GreenThreadPoolExecutor
-    return futurist.ThreadPoolExecutor
+def _get_threadpool_executor() -> type[Executor]:
+    if (
+        _eventlet is not None
+        and _patcher is not None
+        and _patcher.is_monkey_patched('thread')
+    ):
+        return futurist.GreenThreadPoolExecutor  # type: ignore[no-any-return]
+
+    return futurist.ThreadPoolExecutor  # type: ignore[no-any-return]

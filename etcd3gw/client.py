@@ -10,11 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections.abc import Callable, Iterator
 import json
 import os
 import queue
 import threading
 import uuid
+from typing import Any, cast
 
 import requests
 
@@ -30,7 +32,7 @@ from etcd3gw import watch
 _SORT_ORDER = ['none', 'ascend', 'descend']
 _SORT_TARGET = ['key', 'version', 'create', 'mod', 'value']
 
-_EXCEPTIONS_BY_CODE = {
+_EXCEPTIONS_BY_CODE: dict[int, type[exceptions.Etcd3Exception]] = {
     requests.codes['internal_server_error']: exceptions.InternalServerError,
     requests.codes['service_unavailable']: exceptions.ConnectionFailedError,
     requests.codes['request_timeout']: exceptions.ConnectionTimeoutError,
@@ -38,22 +40,22 @@ _EXCEPTIONS_BY_CODE = {
     requests.codes['precondition_failed']: exceptions.PreconditionFailedError,
 }
 
-DEFAULT_API_PATH = os.getenv('ETCD3GW_API_PATH')
+DEFAULT_API_PATH: str | None = os.getenv('ETCD3GW_API_PATH')
 
 
 class Etcd3Client:
     def __init__(
         self,
-        host='localhost',
-        port=2379,
-        protocol="http",
-        ca_cert=None,
-        cert_key=None,
-        cert_cert=None,
-        timeout=None,
-        api_path=DEFAULT_API_PATH,
-        session=None,
-    ):
+        host: str = 'localhost',
+        port: int = 2379,
+        protocol: str = "http",
+        ca_cert: str | None = None,
+        cert_key: str | None = None,
+        cert_cert: str | None = None,
+        timeout: float | None = None,
+        api_path: str | None = DEFAULT_API_PATH,
+        session: requests.Session | None = None,
+    ) -> None:
         """Construct an client to talk to etcd3's grpc-gateway's /v3 HTTP API
 
         :param host: etcd host
@@ -81,23 +83,24 @@ class Etcd3Client:
                 self.session.cert = (cert_cert, cert_key)
 
         self.timeout = timeout
-        self._api_path = api_path
+        self._api_path: str | None = api_path
 
     @property
-    def api_path(self):
+    def api_path(self) -> str:
         if self._api_path is not None:
             return self._api_path
         self._discover_api_path()
+        assert self._api_path is not None
         return self._api_path
 
     @property
-    def base_url(self):
+    def base_url(self) -> str:
         host = (
             '[' + self.host + ']' if (self.host.find(':') != -1) else self.host
         )
         return self.protocol + '://' + host + ':' + str(self.port)
 
-    def _discover_api_path(self):
+    def _discover_api_path(self) -> None:
         """Discover api version and set api_path"""
         resp = self._request('get', self.base_url + '/version')
         try:
@@ -124,7 +127,7 @@ class Etcd3Client:
         else:
             self._api_path = '/v3alpha/'
 
-    def get_url(self, path):
+    def get_url(self, path: str) -> str:
         """Construct a full url to the v3 API given a specific path
 
         :param path:
@@ -133,7 +136,7 @@ class Etcd3Client:
 
         return self.base_url + self.api_path + path.lstrip("/")
 
-    def _request(self, method, *args, **kwargs):
+    def _request(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """helper method for HTTP requests
 
         :param args:
@@ -156,7 +159,7 @@ class Etcd3Client:
             raise exceptions.ConnectionFailedError(str(ex))
         return resp.json()
 
-    def post(self, *args, **kwargs):
+    def post(self, *args: Any, **kwargs: Any) -> Any:
         """helper method for HTTP POST
 
         :param args:
@@ -165,22 +168,22 @@ class Etcd3Client:
         """
         return self._request('post', *args, **kwargs)
 
-    def status(self):
+    def status(self) -> Any:
         """Status gets the status of the etcd cluster member.
 
         :return: json response
         """
         return self.post(self.get_url("/maintenance/status"), json={})
 
-    def members(self):
+    def members(self) -> list[Any]:
         """Lists all the members in the cluster.
 
         :return: json response
         """
         result = self.post(self.get_url("/cluster/member/list"), json={})
-        return result['members']
+        return cast(list[Any], result['members'])
 
-    def lease(self, ttl=DEFAULT_TIMEOUT):
+    def lease(self, ttl: int = DEFAULT_TIMEOUT) -> Lease:
         """Create a Lease object given a timeout
 
         :param ttl: timeout
@@ -191,7 +194,7 @@ class Etcd3Client:
         )
         return Lease(int(result['ID']), client=self)
 
-    def lock(self, id=None, ttl=DEFAULT_TIMEOUT):
+    def lock(self, id: str | None = None, ttl: int = DEFAULT_TIMEOUT) -> Lock:
         """Create a Lock object given an ID and timeout
 
         :param id: ID for the lock, creates a new uuid if not provided
@@ -202,7 +205,12 @@ class Etcd3Client:
             id = str(uuid.uuid4())
         return Lock(id, ttl=ttl, client=self)
 
-    def create(self, key, value, lease=None):
+    def create(
+        self,
+        key: str | bytes,
+        value: str | bytes,
+        lease: Lease | None = None,
+    ) -> bool:
         """Atomically create the given key only if the key doesn't exist.
 
         This verifies that the create_revision of a key equales to 0, then
@@ -219,7 +227,7 @@ class Etcd3Client:
         """
         base64_key = _encode(key)
         base64_value = _encode(value)
-        txn = {
+        txn: dict[str, Any] = {
             'compare': [
                 {
                     'key': base64_key,
@@ -242,10 +250,15 @@ class Etcd3Client:
             txn['success'][0]['request_put']['lease'] = lease.id
         result = self.transaction(txn)
         if 'succeeded' in result:
-            return result['succeeded']
+            return cast(bool, result['succeeded'])
         return False
 
-    def put(self, key, value, lease=None):
+    def put(
+        self,
+        key: str | bytes,
+        value: str | bytes,
+        lease: Lease | None = None,
+    ) -> bool:
         """Put puts the given key into the key-value store.
 
         A put request increments the revision of the key-value store
@@ -256,15 +269,23 @@ class Etcd3Client:
         :param lease:
         :return: boolean
         """
-        payload = {"key": _encode(key), "value": _encode(value)}
+        payload: dict[str, Any] = {
+            "key": _encode(key),
+            "value": _encode(value),
+        }
         if lease:
             payload['lease'] = lease.id
         self.post(self.get_url("/kv/put"), json=payload)
         return True
 
     def get(
-        self, key, metadata=False, sort_order=None, sort_target=None, **kwargs
-    ):
+        self,
+        key: str | bytes,
+        metadata: bool = False,
+        sort_order: str | None = None,
+        sort_target: str | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """Range gets the keys in the range from the key-value store.
 
         :param key:
@@ -291,7 +312,7 @@ class Etcd3Client:
                 '"version", "create", "mod" or "value"'
             )
 
-        payload = {
+        payload: dict[str, Any] = {
             "key": _encode(key),
             "sort_order": order,
             "sort_target": target,
@@ -303,7 +324,9 @@ class Etcd3Client:
 
         if metadata:
 
-            def value_with_metadata(item):
+            def value_with_metadata(
+                item: dict[str, Any],
+            ) -> tuple[bytes, dict[str, Any]]:
                 item['key'] = _decode(item['key'])
                 value = _decode(item.pop('value', ''))
                 return value, item
@@ -312,7 +335,11 @@ class Etcd3Client:
 
         return [_decode(item.get('value', '')) for item in result['kvs']]
 
-    def get_all(self, sort_order=None, sort_target='key'):
+    def get_all(
+        self,
+        sort_order: str | None = None,
+        sort_target: str = 'key',
+    ) -> list[Any]:
         """Get all keys currently stored in etcd.
 
         :returns: sequence of (value, metadata) tuples
@@ -325,7 +352,12 @@ class Etcd3Client:
             range_end=_encode(b'\0'),
         )
 
-    def get_prefix(self, key_prefix, sort_order=None, sort_target=None):
+    def get_prefix(
+        self,
+        key_prefix: str | bytes,
+        sort_order: str | None = None,
+        sort_target: str | None = None,
+    ) -> list[Any]:
         """Get a range of keys with a prefix.
 
         :param sort_order: 'ascend' or 'descend' or None
@@ -341,7 +373,12 @@ class Etcd3Client:
             sort_target=sort_target,
         )
 
-    def replace(self, key, initial_value, new_value):
+    def replace(
+        self,
+        key: str | bytes,
+        initial_value: str | bytes,
+        new_value: str | bytes,
+    ) -> bool:
         """Atomically replace the value of a key with a new value.
 
         This compares the current value of a key, then replaces it with a new
@@ -381,10 +418,10 @@ class Etcd3Client:
         }
         result = self.transaction(txn)
         if 'succeeded' in result:
-            return result['succeeded']
+            return cast(bool, result['succeeded'])
         return False
 
-    def delete(self, key, **kwargs):
+    def delete(self, key: str | bytes, **kwargs: Any) -> bool:
         """DeleteRange deletes the given range from the key-value store.
 
         A delete request increments the revision of the key-value store and
@@ -394,7 +431,7 @@ class Etcd3Client:
         :param kwargs:
         :return:
         """
-        payload = {
+        payload: dict[str, Any] = {
             "key": _encode(key),
         }
         payload.update(kwargs)
@@ -404,13 +441,13 @@ class Etcd3Client:
             return True
         return False
 
-    def delete_prefix(self, key_prefix):
+    def delete_prefix(self, key_prefix: str | bytes) -> bool:
         """Delete a range of keys with a prefix in etcd."""
         return self.delete(
             key_prefix, range_end=_encode(_increment_last_byte(key_prefix))
         )
 
-    def transaction(self, txn):
+    def transaction(self, txn: dict[str, Any]) -> Any:
         """Txn processes multiple requests in a single transaction.
 
         A txn request increments the revision of the key-value store and
@@ -422,7 +459,9 @@ class Etcd3Client:
         """
         return self.post(self.get_url("/kv/txn"), data=json.dumps(txn))
 
-    def watch(self, key, **kwargs):
+    def watch(
+        self, key: str | bytes, **kwargs: Any
+    ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
         """Watch a key.
 
         :param key: key to watch
@@ -431,44 +470,52 @@ class Etcd3Client:
                   Use ``events_iterator`` to get the events of key changes
                   and ``cancel`` to cancel the watch request
         """
-        event_queue = queue.Queue()
+        event_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
 
-        def callback(event):
+        def callback(event: dict[str, Any]) -> None:
             event_queue.put(event)
 
         w = watch.Watcher(self, key, callback, **kwargs)
         canceled = threading.Event()
 
-        def cancel():
+        def cancel() -> None:
             canceled.set()
             event_queue.put(None)
             w.stop()
 
-        def iterator():
+        def iterator() -> Iterator[dict[str, Any]]:
             while not canceled.is_set():
                 event = event_queue.get()
                 if event is None:
                     canceled.set()
                 if not canceled.is_set():
+                    assert event is not None
                     yield event
 
         return iterator(), cancel
 
-    def watch_prefix(self, key_prefix, **kwargs):
+    def watch_prefix(
+        self, key_prefix: str | bytes, **kwargs: Any
+    ) -> tuple[Iterator[Any], Callable[[], None]]:
         """The same as ``watch``, but watches a range of keys with a prefix."""
         kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch(key_prefix, **kwargs)
 
-    def watch_once(self, key, timeout=None, **kwargs):
+    def watch_once(
+        self,
+        key: str | bytes,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Watch a key and stops after the first event.
 
         :param key: key to watch
         :param timeout: (optional) timeout in seconds.
         :returns: event
         """
-        event_queue = queue.Queue()
+        event_queue: queue.Queue[Any] = queue.Queue()
 
-        def callback(event):
+        def callback(event: dict[str, Any]) -> None:
             event_queue.put(event)
 
         w = watch.Watcher(self, key, callback, **kwargs)
@@ -479,23 +526,28 @@ class Etcd3Client:
         finally:
             w.stop()
 
-    def watch_prefix_once(self, key_prefix, timeout=None, **kwargs):
+    def watch_prefix_once(
+        self,
+        key_prefix: str | bytes,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Watches a range of keys with a prefix, similar to watch_once"""
         kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch_once(key_prefix, timeout=timeout, **kwargs)
 
 
 def client(
-    host='localhost',
-    port=2379,
-    ca_cert=None,
-    cert_key=None,
-    cert_cert=None,
-    timeout=None,
-    protocol="http",
-    api_path=DEFAULT_API_PATH,
-    session=None,
-):
+    host: str = 'localhost',
+    port: int = 2379,
+    ca_cert: str | None = None,
+    cert_key: str | None = None,
+    cert_cert: str | None = None,
+    timeout: float | None = None,
+    protocol: str = "http",
+    api_path: str | None = DEFAULT_API_PATH,
+    session: requests.Session | None = None,
+) -> Etcd3Client:
     """Return an instance of an Etcd3Client."""
     return Etcd3Client(
         host=host,

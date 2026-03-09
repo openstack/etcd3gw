@@ -10,15 +10,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections.abc import Callable
 import json
 import socket
+from typing import Any, TYPE_CHECKING
+
+import requests
 
 from etcd3gw.utils import _decode
 from etcd3gw.utils import _encode
 from etcd3gw.utils import _get_threadpool_executor
 
+if TYPE_CHECKING:
+    from etcd3gw import client as _client_module
 
-def _watch(resp, callback):
+
+def _watch(
+    resp: requests.Response,
+    callback: Callable[[dict[str, Any]], None],
+) -> None:
     for line in resp.iter_content(chunk_size=None, decode_unicode=False):
         decoded_line = line.decode('utf-8')
         # Skip a possible empty line (only "\n")
@@ -43,8 +53,14 @@ class Watcher:
     KW_ARGS = ['start_revision', 'progress_notify', 'filters', 'prev_kv']
     KW_ENCODED_ARGS = ['range_end']
 
-    def __init__(self, client, key, callback, **kwargs):
-        create_watch = {'key': _encode(key)}
+    def __init__(
+        self,
+        client: '_client_module.Etcd3Client',
+        key: str | bytes,
+        callback: Callable[[dict[str, Any]], None],
+        **kwargs: Any,
+    ) -> None:
+        create_watch: dict[str, Any] = {'key': _encode(key)}
 
         for arg in kwargs:
             if arg in self.KW_ARGS:
@@ -61,7 +77,7 @@ class Watcher:
         self._executor = clazz(max_workers=2)
         self._executor.submit(_watch, self._response, callback)
 
-    def stop(self):
+    def stop(self) -> None:
         try:
             s = socket.fromfd(
                 self._response.raw._fp.fileno(),

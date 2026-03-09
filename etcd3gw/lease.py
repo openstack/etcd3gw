@@ -10,20 +10,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from typing import TYPE_CHECKING
+
 from etcd3gw.utils import _decode
+
+if TYPE_CHECKING:
+    from etcd3gw import client as _client_module
 
 
 class Lease:
-    def __init__(self, id, client=None):
+    def __init__(self, id: int, client: '_client_module.Etcd3Client') -> None:
         """Lease object for expiring keys
 
         :param id:
         :param client:
         """
         self.id = id
-        self.client = client
+        self.client: _client_module.Etcd3Client = client
 
-    def revoke(self):
+    def revoke(self) -> bool:
         """LeaseRevoke revokes a lease.
 
         All keys attached to the lease will expire and be deleted.
@@ -38,7 +43,7 @@ class Lease:
         )
         return True
 
-    def ttl(self):
+    def ttl(self) -> int:
         """LeaseTimeToLive retrieves lease information.
 
         This method makes a synchronous HTTP request by default. To make an
@@ -52,7 +57,7 @@ class Lease:
         )
         return int(result['TTL'])
 
-    def refresh(self):
+    def refresh(self) -> int:
         """LeaseKeepAlive keeps the lease alive
 
         By streaming keep alive requests from the client to the server and
@@ -69,7 +74,7 @@ class Lease:
         )
         return int(result['result'].get('TTL', -1))
 
-    def keys(self):
+    def keys(self) -> list[bytes]:
         """Get the keys associated with this lease.
 
         :return:
