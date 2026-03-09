@@ -12,6 +12,7 @@
 
 import uuid
 
+from etcd3gw import exceptions
 from etcd3gw.utils import _encode
 from etcd3gw.utils import DEFAULT_TIMEOUT
 from etcd3gw.utils import LOCK_PREFIX
@@ -95,6 +96,9 @@ class Lock:
 
         :return:
         """
+        if self.lease is None:
+            raise exceptions.Etcd3Exception('lease must be acquired first')
+
         return self.lease.refresh()
 
     def is_acquired(self):
