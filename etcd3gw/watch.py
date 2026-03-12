@@ -10,14 +10,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from __future__ import annotations
+
 from collections.abc import Callable
 import json
 import socket
-from typing import Any, Literal, TYPE_CHECKING
+from typing import Any, Literal, TYPE_CHECKING, TypedDict, cast
 import warnings
 
 import requests
 
+from etcd3gw.types import Event
+from etcd3gw.types import WatchResponse
 from etcd3gw.utils import _decode
 from etcd3gw.utils import _encode
 from etcd3gw.utils import _get_threadpool_executor
@@ -26,9 +30,15 @@ if TYPE_CHECKING:
     from etcd3gw import client as _client_module
 
 
+class _WatchStreamChunk(TypedDict):
+    """Outer envelope for a single chunk in the gRPC-gateway watch stream."""
+
+    result: WatchResponse
+
+
 def _watch(
     resp: requests.Response,
-    callback: Callable[[dict[str, Any]], None],
+    callback: Callable[[Event], None],
 ) -> None:
     for line in resp.iter_content(chunk_size=None, decode_unicode=False):
         decoded_line = line.decode('utf-8')
@@ -36,14 +46,15 @@ def _watch(
         # https://bugs.launchpad.net/python-etcd3gw/+bug/2072492
         if not decoded_line.strip():
             continue
-        payload = json.loads(decoded_line)
-        if 'created' in payload['result']:
-            if payload['result']['created']:
+        chunk = cast(_WatchStreamChunk, json.loads(decoded_line))
+        result = chunk['result']
+        if 'created' in result:
+            if result['created']:
                 continue
             else:
                 raise Exception('Unable to create watch')
-        if 'events' in payload['result']:
-            for event in payload['result']['events']:
+        if 'events' in result:
+            for event in result['events']:
                 event['kv']['key'] = _decode(event['kv']['key'])
                 if 'value' in event['kv']:
                     event['kv']['value'] = _decode(event['kv']['value'])
@@ -53,9 +64,9 @@ def _watch(
 class Watcher:
     def __init__(
         self,
-        client: '_client_module.Etcd3Client',
+        client: _client_module.Etcd3Client,
         key: str,
-        callback: Callable[[dict[str, Any]], None],
+        callback: Callable[[Event], None],
         *,
         start_revision: int | None = None,
         progress_notify: bool | None = None,

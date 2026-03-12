@@ -20,11 +20,11 @@ def main() -> None:
     client = Etcd3Client()
 
     print('>>>> Status')
-    result = client.status()
-    print("cluster id : {!r}".format(result['header']['cluster_id']))
+    status = client.status()
+    print("cluster id : {!r}".format(status['header']['cluster_id']))
 
-    result = client.members()
-    print(f"first member info : {result[0]!r}")
+    members = client.members()
+    print(f"first member info : {members[0]!r}")
 
     print('>>>> Lease')
     lease = client.lease()
@@ -32,39 +32,26 @@ def main() -> None:
     print(f"Lease ttl : {lease.ttl()!r}")
     print(f"Lease refresh : {lease.refresh()!r}")
 
-    result = client.put('foo2', 'bar2', lease)
-    print(f"Key put foo2 : {result!r}")
-    result = client.put('foo3', 'bar3', lease)
-    print(f"Key put foo3 : {result!r}")
+    print(f"Key put foo2 : {client.put('foo2', 'bar2', lease)!r}")
+    print(f"Key put foo3 : {client.put('foo3', 'bar3', lease)!r}")
     print(f"Lease Keys : {lease.keys()!r}")
 
-    result = lease.revoke()
-    print(f"Lease Revoke : {result!r}")
+    print(f"Lease Revoke : {lease.revoke()!r}")
 
-    result = client.get('foox')
-    print(f"Key get foox : {result!r}")
+    print(f"Key get foox : {client.get('foox')!r}")
 
-    result = client.put('foo', 'bar')
-    print(f"Key put foo : {result!r}")
-    result = client.get('foo')
-    print(f"Key get foo : {result!r}")
-    result = client.delete('foo')
-    print(f"Key delete foo : {result!r}")
-    result = client.delete('foo-unknown')
-    print(f"Key delete foo-unknown : {result!r}")
+    print(f"Key put foo : {client.put('foo', 'bar')!r}")
+    print(f"Key get foo : {client.get('foo')!r}")
+    print(f"Key delete foo : {client.delete('foo')!r}")
+    print(f"Key delete foo-unknown : {client.delete('foo-unknown')!r}")
 
     print('>>>> Lock')
     lock = Lock(f'xyz-{time.perf_counter()}', ttl=10000, client=client)
-    result = lock.acquire()
-    print(f"acquire : {result!r}")
-    result = lock.refresh()
-    print(f"refresh : {result!r}")
-    result = lock.is_acquired()
-    print(f"is_acquired : {result!r}")
-    result = lock.release()
-    print(f"release : {result!r}")
-    result = lock.is_acquired()
-    print(f"is_acquired : {result!r}")
+    print(f"acquire : {lock.acquire()!r}")
+    print(f"refresh : {lock.refresh()!r}")
+    print(f"is_acquired : {lock.is_acquired()!r}")
+    print(f"release : {lock.release()!r}")
+    print(f"is_acquired : {lock.is_acquired()!r}")
 
 
 if __name__ == "__main__":
