@@ -16,7 +16,7 @@ import os
 import queue
 import threading
 import uuid
-from typing import Any, cast
+from typing import Any, Literal, cast, overload
 
 import requests
 
@@ -286,6 +286,26 @@ class Etcd3Client:
         self.post(self.get_url("/kv/put"), json=payload)
         return True
 
+    @overload
+    def get(
+        self,
+        key: str | bytes,
+        metadata: Literal[False] = False,
+        sort_order: str | None = None,
+        sort_target: str | None = None,
+        **kwargs: Any,
+    ) -> list[bytes]: ...
+
+    @overload
+    def get(
+        self,
+        key: str | bytes,
+        metadata: Literal[True] = ...,
+        sort_order: str | None = None,
+        sort_target: str | None = None,
+        **kwargs: Any,
+    ) -> list[tuple[bytes, dict[str, Any]]]: ...
+
     def get(
         self,
         key: str | bytes,
@@ -293,7 +313,7 @@ class Etcd3Client:
         sort_order: str | None = None,
         sort_target: str | None = None,
         **kwargs: Any,
-    ) -> list[Any]:
+    ) -> list[bytes] | list[tuple[bytes, dict[str, Any]]]:
         """Range gets the keys in the range from the key-value store.
 
         :param key:
@@ -347,13 +367,13 @@ class Etcd3Client:
         self,
         sort_order: str | None = None,
         sort_target: str = 'key',
-    ) -> list[Any]:
+    ) -> list[tuple[bytes, dict[str, Any]]]:
         """Get all keys currently stored in etcd.
 
         :returns: sequence of (value, metadata) tuples
         """
         return self.get(
-            key=_encode(b'\0'),
+            key='\0',
             metadata=True,
             sort_order=sort_order,
             sort_target=sort_target,
@@ -365,7 +385,7 @@ class Etcd3Client:
         key_prefix: str | bytes,
         sort_order: str | None = None,
         sort_target: str | None = None,
-    ) -> list[Any]:
+    ) -> list[tuple[bytes, dict[str, Any]]]:
         """Get a range of keys with a prefix.
 
         :param sort_order: 'ascend' or 'descend' or None
@@ -504,7 +524,7 @@ class Etcd3Client:
 
     def watch_prefix(
         self, key_prefix: str | bytes, **kwargs: Any
-    ) -> tuple[Iterator[Any], Callable[[], None]]:
+    ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
         """The same as ``watch``, but watches a range of keys with a prefix."""
         kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch(key_prefix, **kwargs)
@@ -514,14 +534,14 @@ class Etcd3Client:
         key: str | bytes,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> dict[str, Any]:
         """Watch a key and stops after the first event.
 
         :param key: key to watch
         :param timeout: (optional) timeout in seconds.
         :returns: event
         """
-        event_queue: queue.Queue[Any] = queue.Queue()
+        event_queue: queue.Queue[dict[str, Any]] = queue.Queue()
 
         def callback(event: dict[str, Any]) -> None:
             event_queue.put(event)
@@ -539,7 +559,7 @@ class Etcd3Client:
         key_prefix: str | bytes,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> dict[str, Any]:
         """Watches a range of keys with a prefix, similar to watch_once"""
         kwargs['range_end'] = _increment_last_byte(key_prefix)
         return self.watch_once(key_prefix, timeout=timeout, **kwargs)
