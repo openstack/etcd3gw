@@ -13,7 +13,8 @@
 from collections.abc import Callable
 import json
 import socket
-from typing import Any, TYPE_CHECKING
+from typing import Any, Literal, TYPE_CHECKING
+import warnings
 
 import requests
 
@@ -50,23 +51,68 @@ def _watch(
 
 
 class Watcher:
-    KW_ARGS = ['start_revision', 'progress_notify', 'filters', 'prev_kv']
-    KW_ENCODED_ARGS = ['range_end']
-
     def __init__(
         self,
         client: '_client_module.Etcd3Client',
         key: str,
         callback: Callable[[dict[str, Any]], None],
+        *,
+        start_revision: int | None = None,
+        progress_notify: bool | None = None,
+        filters: list[Literal['NOPUT', 'NODELETE']] | None = None,
+        prev_kv: bool | None = None,
+        range_end: str | None = None,
+        watch_id: int | None = None,
+        fragment: bool | None = None,
         **kwargs: Any,
     ) -> None:
+        """Create a watcher for the given key or range.
+
+        See ``WatchCreateRequest`` in
+        https://github.com/etcd-io/etcd/blob/main/api/etcdserverpb/rpc.proto
+        for the full field definitions.
+
+        :param client: etcd client
+        :param key: key to watch
+        :param callback: callable invoked for each watch event
+        :param start_revision: revision to watch from
+        :param progress_notify: get periodic progress notifications if no
+            events are received
+        :param filters: filter types (``"NOPUT"`` or ``"NODELETE"``);
+            requires etcd >= 3.1
+        :param prev_kv: return the previous key-value on event;
+            requires etcd >= 3.1
+        :param range_end: end of the range to watch (key is the start)
+        :param watch_id: ID to assign to this watcher; 0 means auto-assign
+            (etcd >= 3.4)
+        :param fragment: split large watch responses into multiple smaller
+            responses (etcd >= 3.4)
+        """
         create_watch: dict[str, Any] = {'key': _encode(key)}
 
-        for arg in kwargs:
-            if arg in self.KW_ARGS:
-                create_watch[arg] = kwargs[arg]
-            elif arg in self.KW_ENCODED_ARGS:
-                create_watch[arg] = _encode(kwargs[arg])
+        if start_revision is not None:
+            create_watch['start_revision'] = start_revision
+        if progress_notify is not None:
+            create_watch['progress_notify'] = progress_notify
+        if filters is not None:
+            create_watch['filters'] = filters
+        if prev_kv is not None:
+            create_watch['prev_kv'] = prev_kv
+        if range_end is not None:
+            create_watch['range_end'] = _encode(range_end)
+        if watch_id is not None:
+            create_watch['watch_id'] = watch_id
+        if fragment is not None:
+            create_watch['fragment'] = fragment
+
+        if kwargs:
+            # TODO(stephenfin): Remove this warning and the kwargs argument
+            # from here and all callers in a future version
+            warnings.warn(
+                "Found unknown argument. This is either a bug in the caller "
+                "or a bug/missing feature in etcd3gw.",
+                DeprecationWarning,
+            )
 
         create_request = {"create_request": create_watch}
         self._response = client.session.post(

@@ -42,7 +42,7 @@ def _decode(data: str | bytes | bytearray) -> bytes:
     return base64.b64decode(data.decode("utf-8"))
 
 
-def _increment_last_byte(data: str | bytes | bytearray) -> bytes:
+def _increment_last_byte(data: str | bytes | bytearray) -> str:
     """Get the last byte in the array and increment it
 
     :param bytes_string:
@@ -55,7 +55,7 @@ def _increment_last_byte(data: str | bytes | bytearray) -> bytes:
             data = str(data).encode("latin-1")
     s = bytearray(data)
     s[-1] = s[-1] + 1
-    return bytes(s)
+    return bytes(s).decode()
 
 
 DEFAULT_TIMEOUT: int = 30
