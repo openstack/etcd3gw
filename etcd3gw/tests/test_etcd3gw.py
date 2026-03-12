@@ -103,25 +103,24 @@ class TestEtcd3Gateway(base.TestCase):
         def remove_prefix(string, prefix):
             return string[len(prefix) :]
 
+        prefix = f'/sortorder/{uuid.uuid4()}'
         initial_keys = 'abcde'
         initial_values = 'qwert'
 
         for k, v in zip(initial_keys, initial_values):
-            self.client.put(f'/doot2/{k}', v)
+            self.client.put(f'{prefix}/{k}', v)
 
         keys = b''
-        for value, meta in self.client.get_prefix(
-            '/doot2', sort_order='ascend'
-        ):
-            keys += remove_prefix(meta['key'], '/doot2/')
+        for value, meta in self.client.get_prefix(prefix, sort_order='ascend'):
+            keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert keys == initial_keys.encode("latin-1")
 
         reverse_keys = b''
         for value, meta in self.client.get_prefix(
-            '/doot2', sort_order='descend'
+            prefix, sort_order='descend'
         ):
-            reverse_keys += remove_prefix(meta['key'], '/doot2/')
+            reverse_keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert reverse_keys == ''.join(reversed(initial_keys)).encode(
             "latin-1"
@@ -132,26 +131,27 @@ class TestEtcd3Gateway(base.TestCase):
         def remove_prefix(string, prefix):
             return string[len(prefix) :]
 
+        prefix = f'/sortorderkey/{uuid.uuid4()}'
         initial_keys_ordered = 'abcde'
         initial_keys = 'aebdc'
         initial_values = 'qwert'
 
         for k, v in zip(initial_keys, initial_values):
-            self.client.put(f'/doot2/{k}', v)
+            self.client.put(f'{prefix}/{k}', v)
 
         keys = b''
         for value, meta in self.client.get_prefix(
-            '/doot2', sort_order='ascend', sort_target='key'
+            prefix, sort_order='ascend', sort_target='key'
         ):
-            keys += remove_prefix(meta['key'], '/doot2/')
+            keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert keys == initial_keys_ordered.encode("latin-1")
 
         reverse_keys = b''
         for value, meta in self.client.get_prefix(
-            '/doot2', sort_order='descend', sort_target='key'
+            prefix, sort_order='descend', sort_target='key'
         ):
-            reverse_keys += remove_prefix(meta['key'], '/doot2/')
+            reverse_keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert reverse_keys == ''.join(reversed(initial_keys_ordered)).encode(
             "latin-1"
@@ -162,25 +162,26 @@ class TestEtcd3Gateway(base.TestCase):
         def remove_prefix(string, prefix):
             return string[len(prefix) :]
 
+        prefix = f'/sortordermod/{uuid.uuid4()}'
         initial_keys = 'aebdc'
         initial_values = 'qwert'
 
         for k, v in zip(initial_keys, initial_values):
-            self.client.put(f'/expsortmod/{k}', v)
+            self.client.put(f'{prefix}/{k}', v)
 
         keys = b''
         for value, meta in self.client.get_prefix(
-            '/expsortmod', sort_order='ascend', sort_target='mod'
+            prefix, sort_order='ascend', sort_target='mod'
         ):
-            keys += remove_prefix(meta['key'], '/expsortmod/')
+            keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert keys == initial_keys.encode("latin-1")
 
         reverse_keys = b''
         for value, meta in self.client.get_prefix(
-            '/expsortmod', sort_order='descend', sort_target='mod'
+            prefix, sort_order='descend', sort_target='mod'
         ):
-            reverse_keys += remove_prefix(meta['key'], '/expsortmod/')
+            reverse_keys += remove_prefix(meta['key'], f'{prefix}/')
 
         assert reverse_keys == ''.join(reversed(initial_keys)).encode(
             "latin-1"
