@@ -56,7 +56,7 @@ class Watcher:
     def __init__(
         self,
         client: '_client_module.Etcd3Client',
-        key: str | bytes,
+        key: str,
         callback: Callable[[dict[str, Any]], None],
         **kwargs: Any,
     ) -> None:
