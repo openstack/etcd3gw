@@ -290,8 +290,10 @@ class Etcd3Client:
         self,
         key: str,
         metadata: Literal[False] = False,
-        sort_order: str | None = None,
-        sort_target: str | None = None,
+        sort_order: Literal['none', 'ascend', 'descend'] | None = None,
+        sort_target: (
+            Literal['key', 'version', 'create', 'mod', 'value'] | None
+        ) = None,
         **kwargs: Any,
     ) -> list[bytes]: ...
 
@@ -300,8 +302,10 @@ class Etcd3Client:
         self,
         key: str,
         metadata: Literal[True] = ...,
-        sort_order: str | None = None,
-        sort_target: str | None = None,
+        sort_order: Literal['none', 'ascend', 'descend'] | None = None,
+        sort_target: (
+            Literal['key', 'version', 'create', 'mod', 'value'] | None
+        ) = None,
         **kwargs: Any,
     ) -> list[tuple[bytes, dict[str, Any]]]: ...
 
@@ -309,8 +313,10 @@ class Etcd3Client:
         self,
         key: str,
         metadata: bool = False,
-        sort_order: str | None = None,
-        sort_target: str | None = None,
+        sort_order: Literal['none', 'ascend', 'descend'] | None = None,
+        sort_target: (
+            Literal['key', 'version', 'create', 'mod', 'value'] | None
+        ) = None,
         **kwargs: Any,
     ) -> list[bytes] | list[tuple[bytes, dict[str, Any]]]:
         """Range gets the keys in the range from the key-value store.
@@ -364,8 +370,10 @@ class Etcd3Client:
 
     def get_all(
         self,
-        sort_order: str | None = None,
-        sort_target: str = 'key',
+        sort_order: Literal['none', 'ascend', 'descend'] | None = None,
+        sort_target: (
+            Literal['key', 'version', 'create', 'mod', 'value'] | None
+        ) = 'key',
     ) -> list[tuple[bytes, dict[str, Any]]]:
         """Get all keys currently stored in etcd.
 
@@ -382,8 +390,10 @@ class Etcd3Client:
     def get_prefix(
         self,
         key_prefix: str,
-        sort_order: str | None = None,
-        sort_target: str | None = None,
+        sort_order: Literal['none', 'ascend', 'descend'] | None = None,
+        sort_target: (
+            Literal['key', 'version', 'create', 'mod', 'value'] | None
+        ) = None,
     ) -> list[tuple[bytes, dict[str, Any]]]:
         """Get a range of keys with a prefix.
 
