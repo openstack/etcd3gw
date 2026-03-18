@@ -15,8 +15,9 @@ import json
 import os
 import queue
 import threading
-import uuid
 from typing import Any, Literal, cast, overload
+import uuid
+import warnings
 
 import requests
 
@@ -294,6 +295,17 @@ class Etcd3Client:
         sort_target: (
             Literal['key', 'version', 'create', 'mod', 'value'] | None
         ) = None,
+        *,
+        range_end: str | None = None,
+        limit: int | None = None,
+        revision: int | None = None,
+        serializable: bool | None = None,
+        keys_only: bool | None = None,
+        count_only: bool | None = None,
+        min_mod_revision: int | None = None,
+        max_mod_revision: int | None = None,
+        min_create_revision: int | None = None,
+        max_create_revision: int | None = None,
         **kwargs: Any,
     ) -> list[bytes]: ...
 
@@ -306,6 +318,17 @@ class Etcd3Client:
         sort_target: (
             Literal['key', 'version', 'create', 'mod', 'value'] | None
         ) = None,
+        *,
+        range_end: str | None = None,
+        limit: int | None = None,
+        revision: int | None = None,
+        serializable: bool | None = None,
+        keys_only: bool | None = None,
+        count_only: bool | None = None,
+        min_mod_revision: int | None = None,
+        max_mod_revision: int | None = None,
+        min_create_revision: int | None = None,
+        max_create_revision: int | None = None,
         **kwargs: Any,
     ) -> list[tuple[bytes, dict[str, Any]]]: ...
 
@@ -317,6 +340,17 @@ class Etcd3Client:
         sort_target: (
             Literal['key', 'version', 'create', 'mod', 'value'] | None
         ) = None,
+        *,
+        range_end: str | None = None,
+        limit: int | None = None,
+        revision: int | None = None,
+        serializable: bool | None = None,
+        keys_only: bool | None = None,
+        count_only: bool | None = None,
+        min_mod_revision: int | None = None,
+        max_mod_revision: int | None = None,
+        min_create_revision: int | None = None,
+        max_create_revision: int | None = None,
         **kwargs: Any,
     ) -> list[bytes] | list[tuple[bytes, dict[str, Any]]]:
         """Range gets the keys in the range from the key-value store.
@@ -325,7 +359,6 @@ class Etcd3Client:
         :param metadata:
         :param sort_order: 'ascend' or 'descend' or None
         :param sort_target: 'key' or 'version' or 'create' or 'mod' or 'value'
-        :param kwargs:
         :return:
         """
         try:
@@ -350,7 +383,38 @@ class Etcd3Client:
             "sort_order": order,
             "sort_target": target,
         }
-        payload.update(kwargs)
+
+        if range_end is not None:
+            payload['range_end'] = _encode(range_end)
+        if limit is not None:
+            payload['limit'] = limit
+        if revision is not None:
+            payload['revision'] = revision
+        if serializable is not None:
+            payload['serializable'] = serializable
+        if keys_only is not None:
+            payload['keys_only'] = keys_only
+        if count_only is not None:
+            payload['count_only'] = count_only
+        if min_mod_revision is not None:
+            payload['min_mod_revision'] = min_mod_revision
+        if max_mod_revision is not None:
+            payload['max_mod_revision'] = max_mod_revision
+        if min_create_revision is not None:
+            payload['min_create_revision'] = min_create_revision
+        if max_create_revision is not None:
+            payload['max_create_revision'] = max_create_revision
+
+        if kwargs:
+            # TODO(stephenfin): Remove this warning and the kwargs argument in
+            # a future version
+            warnings.warn(
+                "Found unknown argument. This is either a bug in the caller "
+                "or a bug/missing feature in etcd3gw.",
+                DeprecationWarning,
+            )
+            payload.update(kwargs)
+
         result = self.post(self.get_url("/kv/range"), json=payload)
         if 'kvs' not in result:
             return []
@@ -384,7 +448,7 @@ class Etcd3Client:
             metadata=True,
             sort_order=sort_order,
             sort_target=sort_target,
-            range_end=_encode(b'\0'),
+            range_end='\0',
         )
 
     def get_prefix(
@@ -405,7 +469,7 @@ class Etcd3Client:
         return self.get(
             key_prefix,
             metadata=True,
-            range_end=_encode(_increment_last_byte(key_prefix)),
+            range_end=_increment_last_byte(key_prefix),
             sort_order=sort_order,
             sort_target=sort_target,
         )
@@ -451,20 +515,42 @@ class Etcd3Client:
             return cast(bool, result['succeeded'])
         return False
 
-    def delete(self, key: str, **kwargs: Any) -> bool:
+    def delete(
+        self,
+        key: str,
+        *,
+        range_end: str | None = None,
+        prev_kv: bool | None = None,
+        **kwargs: Any,
+    ) -> bool:
         """DeleteRange deletes the given range from the key-value store.
 
         A delete request increments the revision of the key-value store and
         generates a delete event in the event history for every deleted key.
 
-        :param key:
-        :param kwargs:
-        :return:
+        :param key: key (or start of range) to delete
+        :param range_end: end of range to delete; if unset, only ``key`` is
+            deleted
+        :param prev_kv: if set, return the deleted key-value pairs
+        :return: ``True`` if any key was deleted, ``False`` otherwise
         """
         payload: dict[str, Any] = {
             "key": _encode(key),
         }
-        payload.update(kwargs)
+        if range_end is not None:
+            payload['range_end'] = _encode(range_end)
+        if prev_kv is not None:
+            payload['prev_kv'] = prev_kv
+
+        if kwargs:
+            # TODO(stephenfin): Remove this warning and the kwargs argument in
+            # a future version
+            warnings.warn(
+                "Found unknown argument. This is either a bug in the caller "
+                "or a bug/missing feature in etcd3gw.",
+                DeprecationWarning,
+            )
+            payload.update(kwargs)
 
         result = self.post(self.get_url("/kv/deleterange"), json=payload)
         if 'deleted' in result:
@@ -474,9 +560,14 @@ class Etcd3Client:
     def delete_prefix(self, key_prefix: str) -> bool:
         """Delete a range of keys with a prefix in etcd."""
         return self.delete(
-            key_prefix, range_end=_encode(_increment_last_byte(key_prefix))
+            key_prefix, range_end=_increment_last_byte(key_prefix)
         )
 
+    # NOTE(stephenfin): It would be nice to type txn better but it's pretty
+    # complicated
+    #
+    # https://github.com/etcd-io/etcd/blob/release-3.6/api/etcdserverpb/rpc.proto#L659-L672
+    # https://etcd.io/docs/v3.6/learning/api/#transaction
     def transaction(self, txn: dict[str, Any]) -> Any:
         """Txn processes multiple requests in a single transaction.
 
@@ -490,11 +581,30 @@ class Etcd3Client:
         return self.post(self.get_url("/kv/txn"), data=json.dumps(txn))
 
     def watch(
-        self, key: str, **kwargs: Any
+        self,
+        key: str,
+        *,
+        start_revision: int | None = None,
+        progress_notify: bool | None = None,
+        filters: list[Literal['NOPUT', 'NODELETE']] | None = None,
+        prev_kv: bool | None = None,
+        range_end: str | None = None,
+        watch_id: int | None = None,
+        fragment: bool | None = None,
+        **kwargs: Any,
     ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
         """Watch a key.
 
         :param key: key to watch
+        :param start_revision: revision to watch from
+        :param progress_notify: get periodic progress notifications
+        :param filters: filter types (``"NOPUT"`` or ``"NODELETE"``)
+        :param prev_kv: return the previous key-value on event
+        :param range_end: end of the range to watch (key is the start)
+        :param watch_id: ID to assign to this watcher; 0 means auto-assign
+            (etcd >= 3.4)
+        :param fragment: split large watch responses into multiple smaller
+            responses (etcd >= 3.4)
 
         :returns: tuple of ``events_iterator`` and ``cancel``.
                   Use ``events_iterator`` to get the events of key changes
@@ -505,7 +615,17 @@ class Etcd3Client:
         def callback(event: dict[str, Any]) -> None:
             event_queue.put(event)
 
-        w = watch.Watcher(self, key, callback, **kwargs)
+        w = watch.Watcher(
+            self,
+            key,
+            callback,
+            start_revision=start_revision,
+            progress_notify=progress_notify,
+            filters=filters,
+            prev_kv=prev_kv,
+            range_end=range_end,
+            **kwargs,
+        )
         canceled = threading.Event()
 
         def cancel() -> None:
@@ -525,22 +645,66 @@ class Etcd3Client:
         return iterator(), cancel
 
     def watch_prefix(
-        self, key_prefix: str, **kwargs: Any
+        self,
+        key_prefix: str,
+        *,
+        start_revision: int | None = None,
+        progress_notify: bool | None = None,
+        filters: list[Literal['NOPUT', 'NODELETE']] | None = None,
+        prev_kv: bool | None = None,
+        watch_id: int | None = None,
+        fragment: bool | None = None,
+        **kwargs: Any,
     ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
-        """The same as ``watch``, but watches a range of keys with a prefix."""
-        kwargs['range_end'] = _increment_last_byte(key_prefix)
-        return self.watch(key_prefix, **kwargs)
+        """The same as ``watch``, but watches a range of keys with a prefix.
+
+        :param key_prefix: key prefix to watch
+        :param start_revision: revision to watch from
+        :param progress_notify: get periodic progress notifications
+        :param filters: filter types (``"NOPUT"`` or ``"NODELETE"``)
+        :param prev_kv: return the previous key-value on event
+        :param watch_id: ID to assign to this watcher; 0 means auto-assign
+            (etcd >= 3.4)
+        :param fragment: split large watch responses into multiple smaller
+            responses (etcd >= 3.4)
+        """
+        return self.watch(
+            key_prefix,
+            range_end=_encode(_increment_last_byte(key_prefix)),
+            start_revision=start_revision,
+            progress_notify=progress_notify,
+            filters=filters,
+            prev_kv=prev_kv,
+            **kwargs,
+        )
 
     def watch_once(
         self,
         key: str,
         timeout: float | int | None = None,
+        *,
+        start_revision: int | None = None,
+        progress_notify: bool | None = None,
+        filters: list[Literal['NOPUT', 'NODELETE']] | None = None,
+        prev_kv: bool | None = None,
+        range_end: str | None = None,
+        watch_id: int | None = None,
+        fragment: bool | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Watch a key and stops after the first event.
 
         :param key: key to watch
         :param timeout: (optional) timeout in seconds.
+        :param start_revision: revision to watch from
+        :param progress_notify: get periodic progress notifications
+        :param filters: filter types (``"NOPUT"`` or ``"NODELETE"``)
+        :param prev_kv: return the previous key-value on event
+        :param range_end: end of the range to watch (key is the start)
+        :param watch_id: ID to assign to this watcher; 0 means auto-assign
+            (etcd >= 3.4)
+        :param fragment: split large watch responses into multiple smaller
+            responses (etcd >= 3.4)
         :returns: event
         """
         event_queue: queue.Queue[dict[str, Any]] = queue.Queue()
@@ -548,7 +712,17 @@ class Etcd3Client:
         def callback(event: dict[str, Any]) -> None:
             event_queue.put(event)
 
-        w = watch.Watcher(self, key, callback, **kwargs)
+        w = watch.Watcher(
+            self,
+            key,
+            callback,
+            start_revision=start_revision,
+            progress_notify=progress_notify,
+            filters=filters,
+            prev_kv=prev_kv,
+            range_end=range_end,
+            **kwargs,
+        )
         try:
             return event_queue.get(timeout=timeout)
         except queue.Empty:
@@ -560,11 +734,38 @@ class Etcd3Client:
         self,
         key_prefix: str,
         timeout: float | int | None = None,
+        *,
+        start_revision: int | None = None,
+        progress_notify: bool | None = None,
+        filters: list[Literal['NOPUT', 'NODELETE']] | None = None,
+        prev_kv: bool | None = None,
+        watch_id: int | None = None,
+        fragment: bool | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """Watches a range of keys with a prefix, similar to watch_once"""
-        kwargs['range_end'] = _increment_last_byte(key_prefix)
-        return self.watch_once(key_prefix, timeout=timeout, **kwargs)
+        """Watches a range of keys with a prefix, similar to watch_once.
+
+        :param key_prefix: key prefix to watch
+        :param timeout: (optional) timeout in seconds.
+        :param start_revision: revision to watch from
+        :param progress_notify: get periodic progress notifications
+        :param filters: filter types (``"NOPUT"`` or ``"NODELETE"``)
+        :param prev_kv: return the previous key-value on event
+        :param watch_id: ID to assign to this watcher; 0 means auto-assign
+            (etcd >= 3.4)
+        :param fragment: split large watch responses into multiple smaller
+            responses (etcd >= 3.4)
+        """
+        return self.watch_once(
+            key_prefix,
+            timeout=timeout,
+            range_end=_encode(_increment_last_byte(key_prefix)),
+            start_revision=start_revision,
+            progress_notify=progress_notify,
+            filters=filters,
+            prev_kv=prev_kv,
+            **kwargs,
+        )
 
 
 def client(

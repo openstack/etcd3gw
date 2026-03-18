@@ -450,9 +450,9 @@ class TestEtcd3Gateway(base.TestCase):
         lease = self.client.lease()
 
         status = self.client.create(key, 'bar', lease=lease)
+        self.assertTrue(status)
         # Verify that key is 'bar'
         self.assertEqual([b'bar'], self.client.get(key))
-        self.assertTrue(status)
         keys = lease.keys()
         self.assertEqual(1, len(keys))
         self.assertIn(key.encode('latin-1'), keys)
@@ -503,7 +503,7 @@ class TestEtcd3Gateway(base.TestCase):
 
     @unittest.skipUnless(_is_etcd3_running(), "etcd3 is not available")
     def test_client_keys_with_metadata_and_value(self):
-        test_key_value = "some_key"
+        test_key_value = f"some_key_{uuid.uuid4()}"
         self._post_key(test_key_value)
         result = self.client.get(test_key_value, metadata=True)
         self.assertTrue(
@@ -519,7 +519,7 @@ class TestEtcd3Gateway(base.TestCase):
     @unittest.skipUnless(_is_etcd3_running(), "etcd3 is not available")
     def test_client_keys_with_metadata_and_no_value(self):
         value_is_not_set_default = b""
-        test_key = "some_key"
+        test_key = f"some_key_{uuid.uuid4()}"
         self._post_key(test_key, provide_value=False)
         result = self.client.get(test_key, metadata=True)
         self.assertTrue(
