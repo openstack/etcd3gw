@@ -48,6 +48,8 @@ def _is_etcd3_running():
 
 
 class TestEtcd3Gateway(base.TestCase):
+    client: Etcd3Client
+
     @classmethod
     def setUpClass(cls):
         cls.client = Etcd3Client(port=ETCD_PORT)
@@ -70,7 +72,8 @@ class TestEtcd3Gateway(base.TestCase):
     @unittest.skipUnless(_is_etcd3_running(), "etcd3 is not available")
     def test_client_with_keys_and_values(self):
         self.assertTrue(self.client.put('foo0', 'bar0'))
-        self.assertTrue(self.client.put('foo1', 2001))
+        # we are intentionally testing with legacy values
+        self.assertTrue(self.client.put('foo1', 2001))  # type: ignore[arg-type]
         self.assertTrue(self.client.put('foo2', b'bar2'))
 
         self.assertEqual([b'bar0'], self.client.get('foo0'))
