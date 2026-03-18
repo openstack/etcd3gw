@@ -215,8 +215,8 @@ class Etcd3Client:
 
     def create(
         self,
-        key: str | bytes,
-        value: str | bytes,
+        key: str,
+        value: str,
         lease: Lease | None = None,
     ) -> bool:
         """Atomically create the given key only if the key doesn't exist.
@@ -227,7 +227,6 @@ class Etcd3Client:
 
         :param key: key in etcd to create
         :param value: value of the key
-        :type value: bytes or string
         :param lease: lease to connect with, optional
         :returns: status of transaction, ``True`` if the create was
                   successful, ``False`` otherwise
@@ -263,8 +262,8 @@ class Etcd3Client:
 
     def put(
         self,
-        key: str | bytes,
-        value: str | bytes,
+        key: str,
+        value: str,
         lease: Lease | None = None,
     ) -> bool:
         """Put puts the given key into the key-value store.
@@ -289,7 +288,7 @@ class Etcd3Client:
     @overload
     def get(
         self,
-        key: str | bytes,
+        key: str,
         metadata: Literal[False] = False,
         sort_order: str | None = None,
         sort_target: str | None = None,
@@ -299,7 +298,7 @@ class Etcd3Client:
     @overload
     def get(
         self,
-        key: str | bytes,
+        key: str,
         metadata: Literal[True] = ...,
         sort_order: str | None = None,
         sort_target: str | None = None,
@@ -308,7 +307,7 @@ class Etcd3Client:
 
     def get(
         self,
-        key: str | bytes,
+        key: str,
         metadata: bool = False,
         sort_order: str | None = None,
         sort_target: str | None = None,
@@ -382,7 +381,7 @@ class Etcd3Client:
 
     def get_prefix(
         self,
-        key_prefix: str | bytes,
+        key_prefix: str,
         sort_order: str | None = None,
         sort_target: str | None = None,
     ) -> list[tuple[bytes, dict[str, Any]]]:
@@ -401,12 +400,7 @@ class Etcd3Client:
             sort_target=sort_target,
         )
 
-    def replace(
-        self,
-        key: str | bytes,
-        initial_value: str | bytes,
-        new_value: str | bytes,
-    ) -> bool:
+    def replace(self, key: str, initial_value: str, new_value: str) -> bool:
         """Atomically replace the value of a key with a new value.
 
         This compares the current value of a key, then replaces it with a new
@@ -415,9 +409,7 @@ class Etcd3Client:
 
         :param key: key in etcd to replace
         :param initial_value: old value to replace
-        :type initial_value: bytes or string
         :param new_value: new value of the key
-        :type new_value: bytes or string
         :returns: status of transaction, ``True`` if the replace was
                   successful, ``False`` otherwise
         :rtype: bool
@@ -449,7 +441,7 @@ class Etcd3Client:
             return cast(bool, result['succeeded'])
         return False
 
-    def delete(self, key: str | bytes, **kwargs: Any) -> bool:
+    def delete(self, key: str, **kwargs: Any) -> bool:
         """DeleteRange deletes the given range from the key-value store.
 
         A delete request increments the revision of the key-value store and
@@ -469,7 +461,7 @@ class Etcd3Client:
             return True
         return False
 
-    def delete_prefix(self, key_prefix: str | bytes) -> bool:
+    def delete_prefix(self, key_prefix: str) -> bool:
         """Delete a range of keys with a prefix in etcd."""
         return self.delete(
             key_prefix, range_end=_encode(_increment_last_byte(key_prefix))
@@ -488,7 +480,7 @@ class Etcd3Client:
         return self.post(self.get_url("/kv/txn"), data=json.dumps(txn))
 
     def watch(
-        self, key: str | bytes, **kwargs: Any
+        self, key: str, **kwargs: Any
     ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
         """Watch a key.
 
@@ -523,7 +515,7 @@ class Etcd3Client:
         return iterator(), cancel
 
     def watch_prefix(
-        self, key_prefix: str | bytes, **kwargs: Any
+        self, key_prefix: str, **kwargs: Any
     ) -> tuple[Iterator[dict[str, Any]], Callable[[], None]]:
         """The same as ``watch``, but watches a range of keys with a prefix."""
         kwargs['range_end'] = _increment_last_byte(key_prefix)
@@ -531,7 +523,7 @@ class Etcd3Client:
 
     def watch_once(
         self,
-        key: str | bytes,
+        key: str,
         timeout: float | int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
@@ -556,7 +548,7 @@ class Etcd3Client:
 
     def watch_prefix_once(
         self,
-        key_prefix: str | bytes,
+        key_prefix: str,
         timeout: float | int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
