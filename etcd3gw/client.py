@@ -102,9 +102,23 @@ class Etcd3Client:
 
     def _discover_api_path(self) -> None:
         """Discover api version and set api_path"""
-        resp = self._request('get', self.base_url + '/version')
         try:
-            version_str = resp['etcdserver']
+            resp = self.session.get(
+                self.base_url + '/version', timeout=self.timeout
+            )
+        except requests.exceptions.Timeout as ex:
+            raise exceptions.ConnectionTimeoutError(str(ex))
+        except requests.exceptions.ConnectionError as ex:
+            raise exceptions.ConnectionFailedError(str(ex))
+
+        if resp.status_code in _EXCEPTIONS_BY_CODE:
+            raise _EXCEPTIONS_BY_CODE[resp.status_code](resp.text, resp.reason)
+
+        if resp.status_code != requests.codes['ok']:
+            raise exceptions.Etcd3Exception(resp.text, resp.reason)
+
+        try:
+            version_str = resp.json()['etcdserver']
         except KeyError:
             raise exceptions.ApiVersionDiscoveryFailedError(
                 'Malformed response from version API'
@@ -136,37 +150,31 @@ class Etcd3Client:
 
         return self.base_url + self.api_path + path.lstrip("/")
 
-    def _request(self, method: str, *args: Any, **kwargs: Any) -> Any:
-        """helper method for HTTP requests
-
-        :param args:
-        :param kwargs:
-        :return: json response
-        """
-        try:
-            resp = getattr(self.session, method)(
-                *args, timeout=self.timeout, **kwargs
-            )
-            if resp.status_code in _EXCEPTIONS_BY_CODE:
-                raise _EXCEPTIONS_BY_CODE[resp.status_code](
-                    resp.text, resp.reason
-                )
-            if resp.status_code != requests.codes['ok']:
-                raise exceptions.Etcd3Exception(resp.text, resp.reason)
-        except requests.exceptions.Timeout as ex:
-            raise exceptions.ConnectionTimeoutError(str(ex))
-        except requests.exceptions.ConnectionError as ex:
-            raise exceptions.ConnectionFailedError(str(ex))
-        return resp.json()
-
-    def post(self, *args: Any, **kwargs: Any) -> Any:
+    def post(
+        self, url: str, *args: Any, json: Any = None, **kwargs: Any
+    ) -> Any:
         """helper method for HTTP POST
 
         :param args:
         :param kwargs:
         :return: json response
         """
-        return self._request('post', *args, **kwargs)
+        try:
+            resp = self.session.post(
+                url, *args, json=json, timeout=self.timeout, **kwargs
+            )
+        except requests.exceptions.Timeout as ex:
+            raise exceptions.ConnectionTimeoutError(str(ex))
+        except requests.exceptions.ConnectionError as ex:
+            raise exceptions.ConnectionFailedError(str(ex))
+
+        if resp.status_code in _EXCEPTIONS_BY_CODE:
+            raise _EXCEPTIONS_BY_CODE[resp.status_code](resp.text, resp.reason)
+
+        if resp.status_code != requests.codes['ok']:
+            raise exceptions.Etcd3Exception(resp.text, resp.reason)
+
+        return resp.json()
 
     def status(self) -> Any:
         """Status gets the status of the etcd cluster member.
