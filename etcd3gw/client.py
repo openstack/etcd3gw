@@ -52,7 +52,7 @@ class Etcd3Client:
         ca_cert: str | None = None,
         cert_key: str | None = None,
         cert_cert: str | None = None,
-        timeout: float | None = None,
+        timeout: float | int | None = None,
         api_path: str | None = DEFAULT_API_PATH,
         session: requests.Session | None = None,
     ) -> None:
@@ -532,7 +532,7 @@ class Etcd3Client:
     def watch_once(
         self,
         key: str | bytes,
-        timeout: float | None = None,
+        timeout: float | int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Watch a key and stops after the first event.
@@ -557,7 +557,7 @@ class Etcd3Client:
     def watch_prefix_once(
         self,
         key_prefix: str | bytes,
-        timeout: float | None = None,
+        timeout: float | int | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Watches a range of keys with a prefix, similar to watch_once"""
