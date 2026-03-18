@@ -320,7 +320,7 @@ class TestEtcd3Gateway(base.TestCase):
             )
 
             # if cancel worked, we should not receive event 3
-            assert event['kv']['value'][0] != b'3'
+            assert event['kv']['value'][:1] != b'3'
 
             change_count += 1
             if change_count > 2:

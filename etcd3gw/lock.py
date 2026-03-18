@@ -11,7 +11,7 @@
 #    under the License.
 
 import types
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 import uuid
 
 from etcd3gw import exceptions
@@ -78,7 +78,7 @@ class Lock:
         }
         result = self.client.transaction(txn)
         if 'succeeded' in result:
-            return cast(bool, result['succeeded'])
+            return result['succeeded']
         return False
 
     def release(self) -> bool:
@@ -100,7 +100,7 @@ class Lock:
 
         result = self.client.transaction(txn)
         if 'succeeded' in result:
-            return cast(bool, result['succeeded'])
+            return result['succeeded']
         return False
 
     def refresh(self) -> int:
