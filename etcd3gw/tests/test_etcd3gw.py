@@ -74,7 +74,7 @@ class TestEtcd3Gateway(base.TestCase):
         self.assertTrue(self.client.put('foo0', 'bar0'))
         # we are intentionally testing with legacy values
         self.assertTrue(self.client.put('foo1', 2001))  # type: ignore[arg-type]
-        self.assertTrue(self.client.put('foo2', b'bar2'))  # type: ignore[arg-type]
+        self.assertTrue(self.client.put('foo2', b'bar2'))
 
         self.assertEqual([b'bar0'], self.client.get('foo0'))
         self.assertEqual([b'2001'], self.client.get('foo1'))
@@ -507,13 +507,13 @@ class TestEtcd3Gateway(base.TestCase):
         self._post_key(test_key_value)
         result = self.client.get(test_key_value, metadata=True)
         self.assertTrue(
-            len(result) > 0, test_key_value + " key is not found in etcd"
+            len(result) > 0, f"{test_key_value} key is not found in etcd"
         )
         value, metadata = result[0]
         self.assertEqual(
             value,
             test_key_value.encode('latin-1'),
-            "unable to get value for " + test_key_value,
+            f"unable to get value for {test_key_value}",
         )
 
     @unittest.skipUnless(_is_etcd3_running(), "etcd3 is not available")
@@ -523,11 +523,11 @@ class TestEtcd3Gateway(base.TestCase):
         self._post_key(test_key, provide_value=False)
         result = self.client.get(test_key, metadata=True)
         self.assertTrue(
-            len(result) > 0, test_key + " key is not found in etcd"
+            len(result) > 0, f"{test_key} key is not found in etcd"
         )
         value, metadata = result[0]
         self.assertEqual(
             value,
             value_is_not_set_default,
-            "unable to get value for " + test_key,
+            f"unable to get value for {test_key}",
         )

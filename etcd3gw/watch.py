@@ -65,7 +65,7 @@ class Watcher:
     def __init__(
         self,
         client: _client_module.Etcd3Client,
-        key: str,
+        key: str | bytes,
         callback: Callable[[Event], None],
         *,
         start_revision: int | None = None,
