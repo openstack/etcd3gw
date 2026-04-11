@@ -93,6 +93,6 @@ def _get_threadpool_executor() -> type[Executor]:
         and _patcher is not None
         and _patcher.is_monkey_patched('thread')
     ):
-        return futurist.GreenThreadPoolExecutor  # type: ignore[no-any-return]
+        return futurist.GreenThreadPoolExecutor
 
-    return futurist.ThreadPoolExecutor  # type: ignore[no-any-return]
+    return futurist.ThreadPoolExecutor
