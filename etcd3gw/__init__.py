@@ -10,6 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from typing import cast
+import warnings
+
 import pbr.version
 
 from etcd3gw.client import client
@@ -19,8 +22,6 @@ from etcd3gw.lock import Lock
 from etcd3gw import types
 from etcd3gw import utils
 
-__version__ = pbr.version.VersionInfo('etcd3gw').version_string()
-
 __all__ = (
     'Etcd3Client',
     'Lease',
@@ -29,3 +30,16 @@ __all__ = (
     'types',
     'utils',
 )
+
+
+def __getattr__(name: str) -> str:
+    if name == '__version__':
+        warnings.warn(
+            "Accessing etcd3gw.__version__ is deprecated and will be "
+            "removed in a future release. Use importlib.metadata instead: "
+            "importlib.metadata.version('etcd3gw')",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return cast(str, pbr.version.VersionInfo('etcd3gw').version_string())
+    raise AttributeError(f"module 'etcd3gw' has no attribute {name!r}")
