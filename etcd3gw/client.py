@@ -690,7 +690,7 @@ class Etcd3Client:
         """
         return self.watch(
             key_prefix,
-            range_end=_encode(_increment_last_byte(key_prefix)),
+            range_end=_increment_last_byte(key_prefix),
             start_revision=start_revision,
             progress_notify=progress_notify,
             filters=filters,
