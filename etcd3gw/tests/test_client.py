@@ -273,5 +273,6 @@ class TestEtcd3Gateway(base.TestCase):
 
         http_adapter = client.session.get_adapter('http://localhost:2379')
         self.assertEqual(
-            http_adapter.poolmanager.connection_pool_kw['maxsize'], 20
+            http_adapter.poolmanager.connection_pool_kw['maxsize'],  # type: ignore[attr-defined]
+            20,
         )

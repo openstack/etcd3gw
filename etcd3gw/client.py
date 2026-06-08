@@ -41,7 +41,7 @@ from etcd3gw import watch
 _SORT_ORDER = ['none', 'ascend', 'descend']
 _SORT_TARGET = ['key', 'version', 'create', 'mod', 'value']
 
-_EXCEPTIONS_BY_CODE: dict[int, type[exceptions.Etcd3Exception]] = {
+_EXCEPTIONS_BY_CODE: dict[int | None, type[exceptions.Etcd3Exception]] = {
     requests.codes['internal_server_error']: exceptions.InternalServerError,
     requests.codes['service_unavailable']: exceptions.ConnectionFailedError,
     requests.codes['request_timeout']: exceptions.ConnectionTimeoutError,
@@ -168,7 +168,7 @@ class Etcd3Client:
         :return: json response
         """
         try:
-            resp = self.session.post(
+            resp = self.session.post(  # type: ignore[misc]
                 url, *args, json=json, timeout=self.timeout, **kwargs
             )
         except requests.exceptions.Timeout as ex:
