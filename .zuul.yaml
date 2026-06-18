@@ -8,6 +8,38 @@
     pre-run:
       - playbooks/stop-etcd.yaml
 
+- job:
+    name: etcd3gw-oslo.cache-functional
+    parent: oslo.cache-functional-etcd3gw
+    vars:
+      zuul_work_dir: src/opendev.org/openstack/oslo.cache
+    required-projects:
+      - openstack/etcd3gw
+      - openstack/oslo.cache
+    irrelevant-files: &irrelevant-files
+      - ^\.gitignore$
+      - ^\.gitreview$
+      - ^.*\.rst$
+      - ^doc/.*$
+      - LICENSE
+      - ^releasenotes/.*$
+      - ^\.pre-commit-config\.yaml$
+      - ^etcd3gw/tests/.*$
+      - ^test-requirements\.txt$
+      - ^\.coveragerc$
+      - ^\.mailmap$
+      - ^\.stestr\.conf$
+
+- job:
+    name: etcd3gw-tooz-tox-py3
+    parent: tooz-tox-py3-etcd3gw
+    vars:
+      zuul_work_dir: src/opendev.org/openstack/tooz
+    required-projects:
+      - openstack/etcd3gw
+      - openstack/tooz
+    irrelevant-files: *irrelevant-files
+
 - project:
     templates:
       - check-requirements
@@ -23,9 +55,13 @@
             pre-run:
               - playbooks/stop-etcd.yaml
         - etcd3gw-py314-functional
+        - etcd3gw-oslo.cache-functional
+        - etcd3gw-tooz-tox-py3
     gate:
       jobs:
         - openstack-tox-cover:
             pre-run:
               - playbooks/stop-etcd.yaml
         - etcd3gw-py314-functional
+        - etcd3gw-oslo.cache-functional
+        - etcd3gw-tooz-tox-py3
