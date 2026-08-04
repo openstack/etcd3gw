@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, NotRequired, Required, TypedDict
 
 """Types for responses returned by etcd3.
 
@@ -22,18 +22,7 @@ call site.
 """
 
 
-# NOTE(stephenfin): We can remove the *Base definitions once we drop Python
-# 3.10 support and can use Required/NotRequired (PEP-655)
-
-
-class _KeyValueBase(TypedDict):
-    """Required fields present on every KeyValue."""
-
-    key: bytes
-    mod_revision: str
-
-
-class KeyValue(_KeyValueBase, total=False):
+class KeyValue(TypedDict):
     """An etcd key-value pair as returned by the range and watch APIs.
 
     See ``KeyValue`` in
@@ -49,19 +38,15 @@ class KeyValue(_KeyValueBase, total=False):
     value).
     """
 
-    create_revision: str
-    version: str
-    value: bytes
-    lease: str
+    key: Required[bytes]
+    mod_revision: Required[str]
+    create_revision: NotRequired[str]
+    version: NotRequired[str]
+    value: NotRequired[bytes]
+    lease: NotRequired[str]
 
 
-class _EventBase(TypedDict):
-    """Required fields present on every event."""
-
-    kv: KeyValue
-
-
-class Event(_EventBase, total=False):
+class Event(TypedDict):
     """An etcd event as returned by the gRPC-gateway streaming API.
 
     See ``Event`` in
@@ -74,17 +59,12 @@ class Event(_EventBase, total=False):
     ``prev_kv`` option and requires etcd >= 3.1.
     """
 
-    type: str
-    prev_kv: KeyValue
+    kv: Required[KeyValue]
+    type: NotRequired[str]
+    prev_kv: NotRequired[KeyValue]
 
 
-class _RangeResponseBase(TypedDict):
-    """Required fields present in every range response."""
-
-    header: dict[str, Any]
-
-
-class RangeResponse(_RangeResponseBase, total=False):
+class RangeResponse(TypedDict):
     """Response from a range (get) operation.
 
     See ``RangeResponse`` in
@@ -96,23 +76,13 @@ class RangeResponse(_RangeResponseBase, total=False):
     ``count`` is absent when zero.
     """
 
-    kvs: list[KeyValue]
-    more: bool
-    count: str
+    header: Required[dict[str, Any]]
+    kvs: NotRequired[list[KeyValue]]
+    more: NotRequired[bool]
+    count: NotRequired[str]
 
 
-class _StatusResponseBase(TypedDict):
-    """Required fields present in every status response."""
-
-    header: dict[str, Any]
-    version: str
-    dbSize: str
-    leader: str
-    raftIndex: str
-    raftTerm: str
-
-
-class StatusResponse(_StatusResponseBase, total=False):
+class StatusResponse(TypedDict):
     """Response from :meth:`~etcd3gw.client.Etcd3Client.status`.
 
     See ``StatusResponse`` in
@@ -127,19 +97,19 @@ class StatusResponse(_StatusResponseBase, total=False):
     require etcd >= 3.4.
     """
 
-    raftAppliedIndex: str
-    errors: list[str]
-    dbSizeInUse: str
-    isLearner: bool
+    header: Required[dict[str, Any]]
+    version: Required[str]
+    dbSize: Required[str]
+    leader: Required[str]
+    raftIndex: Required[str]
+    raftTerm: Required[str]
+    raftAppliedIndex: NotRequired[str]
+    errors: NotRequired[list[str]]
+    dbSizeInUse: NotRequired[str]
+    isLearner: NotRequired[bool]
 
 
-class _MemberBase(TypedDict):
-    """Required fields present on every cluster member."""
-
-    ID: str
-
-
-class Member(_MemberBase, total=False):
+class Member(TypedDict):
     """An etcd cluster member.
 
     See ``Member`` in
@@ -152,19 +122,14 @@ class Member(_MemberBase, total=False):
     ``isLearner`` when ``False``.
     """
 
-    name: str
-    peerURLs: list[str]
-    clientURLs: list[str]
-    isLearner: bool
+    ID: Required[str]
+    name: NotRequired[str]
+    peerURLs: NotRequired[list[str]]
+    clientURLs: NotRequired[list[str]]
+    isLearner: NotRequired[bool]
 
 
-class _TxnResponseBase(TypedDict):
-    """Required fields present in every transaction response."""
-
-    header: dict[str, Any]
-
-
-class TxnResponse(_TxnResponseBase, total=False):
+class TxnResponse(TypedDict):
     """Response from a transaction operation.
 
     See https://github.com/etcd-io/etcd/blob/main/api/etcdserverpb/rpc.proto
@@ -175,19 +140,14 @@ class TxnResponse(_TxnResponseBase, total=False):
     the list is empty.
     """
 
-    succeeded: bool
+    header: Required[dict[str, Any]]
+    succeeded: NotRequired[bool]
     # it would be nice to type this but it's pretty complicated
     # https://etcd.io/docs/v3.6/learning/api/#transaction
-    responses: list[Any]
+    responses: NotRequired[list[Any]]
 
 
-class _WatchResponseBase(TypedDict):
-    """Required fields present in every watch response."""
-
-    header: dict[str, Any]
-
-
-class WatchResponse(_WatchResponseBase, total=False):
+class WatchResponse(TypedDict):
     """A streaming response chunk from the watch API.
 
     See ``WatchResponse`` in
@@ -201,10 +161,11 @@ class WatchResponse(_WatchResponseBase, total=False):
     empty.
     """
 
-    watch_id: str
-    created: bool
-    canceled: bool
-    compact_revision: str
-    cancel_reason: str
-    fragment: bool
-    events: list[Event]
+    header: Required[dict[str, Any]]
+    watch_id: NotRequired[str]
+    created: NotRequired[bool]
+    canceled: NotRequired[bool]
+    compact_revision: NotRequired[str]
+    cancel_reason: NotRequired[str]
+    fragment: NotRequired[bool]
+    events: NotRequired[list[Event]]
