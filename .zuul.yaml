@@ -5,12 +5,13 @@
     parent: openstack-tox-py312
     vars:
       tox_envlist: py312-etcd
+    pre-run:
+      - playbooks/stop-etcd.yaml
 
 - project:
     templates:
       - check-requirements
       - lib-forward-testing-python3
-      - openstack-cover-jobs
       - openstack-python3-jobs
       - openstack-python3-next-jobs
       - periodic-stable-jobs
@@ -18,7 +19,13 @@
       - release-notes-jobs-python3
     check:
       jobs:
+        - openstack-tox-cover:
+            pre-run:
+              - playbooks/stop-etcd.yaml
         - etcd3gw-py312-functional
     gate:
       jobs:
+        - openstack-tox-cover:
+            pre-run:
+              - playbooks/stop-etcd.yaml
         - etcd3gw-py312-functional

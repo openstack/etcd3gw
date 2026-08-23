@@ -1,0 +1,2 @@
+etcd-server [platform:dpkg test]
+etcd-client [platform:dpkg test]
