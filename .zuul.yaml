@@ -1,10 +1,10 @@
 ---
 
 - job:
-    name: etcd3gw-py312-functional
-    parent: openstack-tox-py312
+    name: etcd3gw-py314-functional
+    parent: openstack-tox-py314
     vars:
-      tox_envlist: py312-etcd
+      tox_envlist: py314-etcd
     pre-run:
       - playbooks/stop-etcd.yaml
 
@@ -22,10 +22,10 @@
         - openstack-tox-cover:
             pre-run:
               - playbooks/stop-etcd.yaml
-        - etcd3gw-py312-functional
+        - etcd3gw-py314-functional
     gate:
       jobs:
         - openstack-tox-cover:
             pre-run:
               - playbooks/stop-etcd.yaml
-        - etcd3gw-py312-functional
+        - etcd3gw-py314-functional
