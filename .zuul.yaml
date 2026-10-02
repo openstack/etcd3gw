@@ -31,6 +31,16 @@
       - ^\.stestr\.conf$
 
 - job:
+    name: etcd3gw-taskflow-functional
+    parent: taskflow-functional-etcd
+    vars:
+      zuul_work_dir: src/opendev.org/openstack/taskflow
+    required-projects:
+      - openstack/etcd3gw
+      - openstack/taskflow
+    irrelevant-files: *irrelevant-files
+
+- job:
     name: etcd3gw-tooz-tox-py3
     parent: tooz-tox-py3-etcd3gw
     vars:
@@ -56,6 +66,7 @@
               - playbooks/stop-etcd.yaml
         - etcd3gw-py314-functional
         - etcd3gw-oslo.cache-functional
+        - etcd3gw-taskflow-functional
         - etcd3gw-tooz-tox-py3
     gate:
       jobs:
@@ -64,4 +75,5 @@
               - playbooks/stop-etcd.yaml
         - etcd3gw-py314-functional
         - etcd3gw-oslo.cache-functional
+        - etcd3gw-taskflow-functional
         - etcd3gw-tooz-tox-py3
