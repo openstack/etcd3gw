@@ -1,9 +1,0 @@
-[run]
-branch = True
-source = etcd3gw
-omit =
-    etcd3gw/tests/*
-    etcd3gw/examples/*
-
-[report]
-ignore_errors = True
