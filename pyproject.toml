@@ -35,6 +35,19 @@ Repository = "https://opendev.org/openstack/etcd3gw"
 [tool.setuptools.packages.find]
 include = ["etcd3gw*"]
 
+[tool.coverage.run]
+source = [
+    "etcd3gw"
+]
+branch = true
+omit = [
+    "etcd3gw/tests/*"
+]
+
+[tool.coverage.report]
+ignore_errors = true
+show_missing = true
+
 [tool.mypy]
 python_version = "3.11"
 show_column_numbers = true
